@@ -1,0 +1,106 @@
+{
+  "benchmarkMetadata": {
+    "timestamp": "2026-10-18T12:44:29.563Z",
+    "dataset": {
+      "name": "FindAI Synthetic Lost-and-Found Benchmark v1",
+      "type": "synthetic",
+      "version": "1.0.0",
+      "description": "Controlled synthetic lost-and-found report pairs with ground-truth relevance labels",
+      "categoriesCovered": [
+        "Electronics",
+        "Bags",
+        "Accessories",
+        "Keys",
+        "Jewelry",
+        "Eyewear",
+        "Musical Instruments"
+      ],
+      "candidatePoolSize": 16,
+      "queryCount": 10,
+      "disclaimer": "SYNTHETIC BENCHMARK DATASET: Does not contain private user records or real-world evidence."
+    },
+    "prewarmDurationMs": 365,
+    "limitations": [
+      "Evaluated on synthetic test queries and candidates created for algorithmic benchmarking.",
+      "Does not measure user submission errors, heavily corrupted photos, or multi-lingual texts.",
+      "Scores reflect relative algorithmic ranking performance under controlled conditions."
+    ]
+  },
+  "methods": [
+    {
+      "id": "keyword-baseline",
+      "name": "A. Keyword Baseline (Lexical + Exact Category)",
+      "metrics": {
+        "queryCount": 10,
+        "queriesWithRelevant": 9,
+        "queriesWithoutRelevant": 1,
+        "precisionAt1": 0.9,
+        "precisionAt3": 0.3,
+        "precisionAt5": 0.18,
+        "recallAt1": 1,
+        "recallAt3": 1,
+        "recallAt5": 1,
+        "meanReciprocalRank": 0.9,
+        "latency": {
+          "count": 10,
+          "meanMs": 0.8,
+          "medianMs": 0.1,
+          "p90Ms": 7.3,
+          "minMs": 0.1,
+          "maxMs": 7.3
+        }
+      },
+      "coldStartLatencyMs": 7.3
+    },
+    {
+      "id": "ai-text-metadata",
+      "name": "B. Text + Metadata AI Matcher (all-MiniLM-L6-v2)",
+      "metrics": {
+        "queryCount": 10,
+        "queriesWithRelevant": 9,
+        "queriesWithoutRelevant": 1,
+        "precisionAt1": 0.9,
+        "precisionAt3": 0.3,
+        "precisionAt5": 0.18,
+        "recallAt1": 1,
+        "recallAt3": 1,
+        "recallAt5": 1,
+        "meanReciprocalRank": 0.9,
+        "latency": {
+          "count": 10,
+          "meanMs": 54.2,
+          "medianMs": 51,
+          "p90Ms": 65.6,
+          "minMs": 47.8,
+          "maxMs": 65.6
+        }
+      },
+      "coldStartLatencyMs": 63.7
+    },
+    {
+      "id": "ai-multimodal-full",
+      "name": "C. Full Multimodal AI Matcher (Text + CLIP ViT-B/32 + Metadata)",
+      "metrics": {
+        "queryCount": 10,
+        "queriesWithRelevant": 9,
+        "queriesWithoutRelevant": 1,
+        "precisionAt1": 0.9,
+        "precisionAt3": 0.3,
+        "precisionAt5": 0.18,
+        "recallAt1": 1,
+        "recallAt3": 1,
+        "recallAt5": 1,
+        "meanReciprocalRank": 0.9,
+        "latency": {
+          "count": 10,
+          "meanMs": 81.1,
+          "medianMs": 52.3,
+          "p90Ms": 226.1,
+          "minMs": 47.9,
+          "maxMs": 226.1
+        }
+      },
+      "coldStartLatencyMs": 49.2
+    }
+  ]
+}
