@@ -354,19 +354,20 @@ claimRoutes.patch('/claims/:id/review', async (req, res) => {
     return res.status(400).json({ error: 'Bad Request', message: `Action must be one of: ${validActions.join(', ')}` });
   }
 
-  // Use serviceSupabase to bypass RLS for authorized admin/backend operations, fallback to userSupabase
+  // Use userSupabase (enforcing RLS) for non-admin claim lookup; allow serviceSupabase for verified admins
+  const readClient = (isAdmin && req.serviceSupabase) ? req.serviceSupabase : userSupabase;
   const dbClient = req.serviceSupabase || userSupabase;
 
   try {
-    // 1. Fetch claim and found item
-    const { data: claim, error: claimError } = await dbClient
+    // 1. Fetch claim and found item under RLS boundary
+    const { data: claim, error: claimError } = await readClient
       .from('item_claims')
       .select('*, found_item:items!found_item_id(id, title, user_id, status)')
       .eq('id', claimId.trim())
       .single();
 
     if (claimError || !claim) {
-      return res.status(404).json({ error: 'Not Found', message: 'Claim record not found.' });
+      return res.status(404).json({ error: 'Not Found', message: 'Claim record not found or access denied.' });
     }
 
     const isFinder = claim.found_item && claim.found_item.user_id === userId;
@@ -883,6 +884,8 @@ claimRoutes.post('/handovers/:id/coordinate', async (req, res) => {
   const { proposedLocation, scheduledAt, notes } = req.body;
   const userId = req.user.id;
   const userSupabase = req.userSupabase;
+  const isAdmin = isAuthorizedAdmin(req.user);
+  const readClient = (isAdmin && req.serviceSupabase) ? req.serviceSupabase : userSupabase;
   const dbClient = req.serviceSupabase || userSupabase;
 
   if (!handoverId || !UUID_V4_REGEX.test(handoverId.trim())) {
@@ -893,19 +896,18 @@ claimRoutes.post('/handovers/:id/coordinate', async (req, res) => {
   }
 
   try {
-    const { data: handover, error: hError } = await dbClient
+    const { data: handover, error: hError } = await readClient
       .from('item_handovers')
       .select('*, claim:item_claims!claim_id(*, found_item:items!found_item_id(*))')
       .eq('id', handoverId.trim())
       .single();
 
     if (hError || !handover) {
-      return res.status(404).json({ error: 'Not Found', message: 'Handover record not found.' });
+      return res.status(404).json({ error: 'Not Found', message: 'Handover record not found or access denied.' });
     }
 
-    const isClaimant = handover.claim.claimant_id === userId;
-    const isFinder = handover.claim.found_item.user_id === userId;
-    const isAdmin = isAuthorizedAdmin(req.user);
+    const isClaimant = handover.claim?.claimant_id === userId;
+    const isFinder = handover.claim?.found_item?.user_id === userId;
 
     if (!isClaimant && !isFinder && !isAdmin) {
       return res.status(403).json({ error: 'Forbidden', message: 'You are not a participant in this handover.' });
@@ -978,6 +980,8 @@ claimRoutes.post('/handovers/:id/confirm', async (req, res) => {
   const { confirmationType } = req.body; // 'finder_handed_over' | 'claimant_received'
   const userId = req.user.id;
   const userSupabase = req.userSupabase;
+  const isAdmin = isAuthorizedAdmin(req.user);
+  const readClient = (isAdmin && req.serviceSupabase) ? req.serviceSupabase : userSupabase;
   const dbClient = req.serviceSupabase || userSupabase;
 
   if (!handoverId || !UUID_V4_REGEX.test(handoverId.trim())) {
@@ -988,14 +992,14 @@ claimRoutes.post('/handovers/:id/confirm', async (req, res) => {
   }
 
   try {
-    const { data: handover, error: hError } = await dbClient
+    const { data: handover, error: hError } = await readClient
       .from('item_handovers')
       .select('*, claim:item_claims!claim_id(*, found_item:items!found_item_id(*))')
       .eq('id', handoverId.trim())
       .single();
 
     if (hError || !handover) {
-      return res.status(404).json({ error: 'Not Found', message: 'Handover record not found.' });
+      return res.status(404).json({ error: 'Not Found', message: 'Handover record not found or access denied.' });
     }
 
     if (handover.status === 'suspended') {
@@ -1059,34 +1063,25 @@ claimRoutes.post('/handovers/:id/confirm', async (req, res) => {
         })
       );
 
-      // Safe Return Finalization: Call complete_item_return database RPC or transactional update
+      // Safe Return Finalization: Call complete_item_return database RPC
       const { data: rpcResult, error: rpcError } = await dbClient.rpc('complete_item_return', {
         p_claim_id: handover.claim_id,
         p_handover_id: handoverId.trim(),
       });
 
-      if (rpcError) {
-        console.warn('[Handover Confirm] RPC failed, falling back to sequential update:', rpcError.message);
-        // Fallback transactional updates
-        await dbClient.from('item_handovers').update({
-          ...updateFields,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        }).eq('id', handoverId.trim());
-
-        await dbClient.from('item_claims').update({
-          status: 'completed',
-          private_proof: { ...currentProof, auditTrail },
-        }).eq('id', handover.claim_id);
-
-        await dbClient.from('items').update({ status: 'returned' }).eq('id', handover.claim.found_item_id);
-        await dbClient.from('items').update({ status: 'returned' }).eq('id', handover.claim.lost_item_id);
-      } else {
-        // Update audit trail on claim
-        await dbClient.from('item_claims').update({
-          private_proof: { ...currentProof, auditTrail },
-        }).eq('id', handover.claim_id);
+      if (rpcError || (rpcResult && !rpcResult.success)) {
+        const failureReason = rpcError ? rpcError.message : (rpcResult?.error || 'Atomic return finalization failed');
+        console.error('[Handover Confirm] complete_item_return failed:', failureReason);
+        return res.status(400).json({
+          error: 'Return Completion Failed',
+          message: failureReason,
+        });
       }
+
+      // Update audit trail on completed claim
+      await dbClient.from('item_claims').update({
+        private_proof: { ...currentProof, auditTrail },
+      }).eq('id', handover.claim_id);
 
       // Notify both parties of final return completion
       await createUserNotification(dbClient, {

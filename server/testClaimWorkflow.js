@@ -103,11 +103,18 @@ test('evaluateClaimRisk flags claims as high risk when dispute or suspicion is r
 test('isAuthorizedAdmin verifies server-configured admin emails strictly and case-insensitively', () => {
   process.env.ADMIN_EMAILS = 'security@university.edu,admin@findai.org,mdarmanalam2529@gmail.com';
 
-  assert.equal(isAuthorizedAdmin({ email: 'security@university.edu' }), true);
-  assert.equal(isAuthorizedAdmin({ email: 'SECURITY@UNIVERSITY.EDU' }), true);
-  assert.equal(isAuthorizedAdmin({ email: 'mdarmanalam2529@gmail.com' }), true);
-  assert.equal(isAuthorizedAdmin({ email: 'attacker@evil.com' }), false);
-  assert.equal(isAuthorizedAdmin({ email: 'fakeadmin@findai.org.attacker.com' }), false);
+  // Verified admin emails with confirmed status
+  assert.equal(isAuthorizedAdmin({ email: 'security@university.edu', email_confirmed_at: '2026-10-18T12:00:00Z' }), true);
+  assert.equal(isAuthorizedAdmin({ email: 'SECURITY@UNIVERSITY.EDU', email_confirmed_at: '2026-10-18T12:00:00Z' }), true);
+  assert.equal(isAuthorizedAdmin({ email: 'mdarmanalam2529@gmail.com', email_confirmed_at: '2026-10-18T12:00:00Z' }), true);
+
+  // Unverified accounts (missing email_confirmed_at or null) must NEVER receive admin access
+  assert.equal(isAuthorizedAdmin({ email: 'security@university.edu', email_confirmed_at: null }), false);
+  assert.equal(isAuthorizedAdmin({ email: 'security@university.edu' }), false);
+
+  // Non-admin emails
+  assert.equal(isAuthorizedAdmin({ email: 'attacker@evil.com', email_confirmed_at: '2026-10-18T12:00:00Z' }), false);
+  assert.equal(isAuthorizedAdmin({ email: 'fakeadmin@findai.org.attacker.com', email_confirmed_at: '2026-10-18T12:00:00Z' }), false);
   assert.equal(isAuthorizedAdmin(null), false);
 });
 
@@ -237,7 +244,7 @@ test('Claim creation validation rejects claiming own found report or mismatched 
 
 // 10. Admin Review Actions & Audit Trail
 test('Admin review workflow: admin_approve overrides hold with mandatory audit reason', () => {
-  const adminUser = { id: 'admin-1', email: 'security@findai.org' };
+  const adminUser = { id: 'admin-1', email: 'security@findai.org', email_confirmed_at: '2026-10-18T12:00:00Z' };
   process.env.ADMIN_EMAILS = 'security@findai.org';
   assert.equal(isAuthorizedAdmin(adminUser), true);
 

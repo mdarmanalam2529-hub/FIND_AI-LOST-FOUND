@@ -63,24 +63,32 @@ export function createAuditEntry({ actorId, actorEmail = null, actorRole, action
 
 /**
  * Check if user is an authorized admin/security reviewer.
- * Derives strictly from server configuration (ADMIN_EMAILS env) or Supabase app_metadata.
+ * Derives strictly from trusted server-managed authorization:
+ * - Supabase app_metadata.role (set exclusively by Supabase backend / service role)
+ * - Or server-configured ADMIN_EMAILS env variable ONLY when user identity is confirmed (email_confirmed_at).
+ * User-editable profile metadata (user_metadata) is NEVER trusted for administrative access.
  */
 export function isAuthorizedAdmin(user) {
-  if (!user) return false;
+  if (!user || typeof user !== 'object') return false;
   
-  // 1. Check server-configured admin emails
-  const adminEmails = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+  // 1. Check server-managed app_metadata (immutable by client users)
+  const appRole = user.app_metadata?.role;
+  if (appRole === 'admin' || appRole === 'security_reviewer') {
     return true;
   }
 
-  // 2. Check app_metadata role (set exclusively by Supabase backend / service role)
-  if (user.app_metadata?.role === 'admin' || user.app_metadata?.role === 'security_reviewer') {
-    return true;
+  // 2. Server-configured ADMIN_EMAILS fallback:
+  // Requires confirmed email identity (email_confirmed_at must be present).
+  // An unconfirmed or pending email registration is NEVER granted administrative access.
+  if (user.email && user.email_confirmed_at) {
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase())) {
+      return true;
+    }
   }
 
   return false;

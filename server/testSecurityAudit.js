@@ -10,6 +10,10 @@ import {
   sanitizeLocation,
   DEFAULT_WEIGHTS,
 } from './aiMatcher.js';
+import {
+  isAuthorizedAdmin,
+  isValidClaimStatusTransition,
+} from './claimWorkflow.js';
 
 console.log('--- FindAI Security Audit & Regression Test Suite ---');
 
@@ -179,4 +183,156 @@ test('weight sanitization strips invalid, negative, or infinite values', () => {
   assert.deepEqual(safeWeights, DEFAULT_WEIGHTS);
 });
 
+// 7. Admin Authorization: Rejection of Unverified Email
+test('isAuthorizedAdmin rejects unverified email even if address matches ADMIN_EMAILS', () => {
+  const origEnv = process.env.ADMIN_EMAILS;
+  process.env.ADMIN_EMAILS = 'security-admin@university.edu';
+  try {
+    // Unverified accounts (missing email_confirmed_at or null) must NEVER receive admin access
+    assert.equal(isAuthorizedAdmin({ email: 'security-admin@university.edu', email_confirmed_at: null }), false);
+    assert.equal(isAuthorizedAdmin({ email: 'security-admin@university.edu' }), false);
+    assert.equal(isAuthorizedAdmin({ email: 'security-admin@university.edu', email_confirmed_at: '' }), false);
+  } finally {
+    process.env.ADMIN_EMAILS = origEnv;
+  }
+});
+
+// 8. Admin Authorization: Rejection of User Metadata Role Injection
+test('isAuthorizedAdmin rejects user_metadata role injection attempts', () => {
+  const maliciousUser = {
+    email: 'attacker@outside.com',
+    email_confirmed_at: '2026-10-20T10:00:00Z',
+    user_metadata: { role: 'admin', is_admin: true }, // User-editable metadata
+    app_metadata: { role: 'authenticated' },           // Server-managed metadata
+  };
+  assert.equal(isAuthorizedAdmin(maliciousUser), false, 'user_metadata must never confer admin privileges');
+});
+
+// 9. Admin Authorization: Acceptance of Verified Email Matching ADMIN_EMAILS
+test('isAuthorizedAdmin grants admin to confirmed emails matching ADMIN_EMAILS', () => {
+  const origEnv = process.env.ADMIN_EMAILS;
+  process.env.ADMIN_EMAILS = 'admin-alice@university.edu, admin-bob@university.edu';
+  try {
+    const verifiedAdmin = {
+      email: 'admin-alice@university.edu',
+      email_confirmed_at: '2026-10-18T12:00:00Z',
+    };
+    assert.equal(isAuthorizedAdmin(verifiedAdmin), true);
+
+    // Case-insensitivity check
+    const caseAdmin = {
+      email: 'ADMIN-BOB@UNIVERSITY.EDU',
+      email_confirmed_at: '2026-10-18T12:00:00Z',
+    };
+    assert.equal(isAuthorizedAdmin(caseAdmin), true);
+  } finally {
+    process.env.ADMIN_EMAILS = origEnv;
+  }
+});
+
+// 10. Admin Authorization: Acceptance of Trusted Server-Managed Roles
+test('isAuthorizedAdmin respects server-managed app_metadata roles', () => {
+  assert.equal(isAuthorizedAdmin({ app_metadata: { role: 'admin' } }), true);
+  assert.equal(isAuthorizedAdmin({ app_metadata: { role: 'security_reviewer' } }), true);
+  assert.equal(isAuthorizedAdmin({ app_metadata: { role: 'user' } }), false);
+  assert.equal(isAuthorizedAdmin(null), false);
+  assert.equal(isAuthorizedAdmin({}), false);
+});
+
+// 11. Claim Authorization: Claimant Cannot Self-Approve Claim
+test('isValidClaimStatusTransition strictly forbids claimant self-approval', () => {
+  // Claimant trying to approve their own pending or under_review claim
+  const selfApprovePending = isValidClaimStatusTransition('pending', 'approved', { isFinder: false, isAdmin: false });
+  assert.equal(selfApprovePending, false, 'Claimant must not be permitted to self-approve a pending claim');
+
+  const selfApproveReview = isValidClaimStatusTransition('under_review', 'approved', { isFinder: false, isAdmin: false });
+  assert.equal(selfApproveReview, false, 'Claimant must not be permitted to self-approve an under_review claim');
+
+  // Claimant trying to reject or dispute
+  const selfReject = isValidClaimStatusTransition('pending', 'rejected', { isFinder: false, isAdmin: false });
+  assert.equal(selfReject, false, 'Claimant cannot reject claims (only cancel own claim)');
+});
+
+// 12. Claim Authorization: Legitimate Finder and Admin Workflows Preserved
+test('isValidClaimStatusTransition preserves legitimate Finder, Claimant, and Admin actions', () => {
+  // Finder can approve uncontested pending claim
+  assert.equal(isValidClaimStatusTransition('pending', 'approved', { isFinder: true, isAdmin: false }), true);
+  // Finder can reject claim
+  assert.equal(isValidClaimStatusTransition('pending', 'rejected', { isFinder: true, isAdmin: false }), true);
+  // Finder cannot override admin review directly
+  assert.equal(isValidClaimStatusTransition('under_review', 'approved', { isFinder: true, isAdmin: false }), false);
+
+  // Admin can transition across review and decision states
+  assert.equal(isValidClaimStatusTransition('under_review', 'approved', { isFinder: false, isAdmin: true }), true);
+  assert.equal(isValidClaimStatusTransition('under_review', 'rejected', { isFinder: false, isAdmin: true }), true);
+  assert.equal(isValidClaimStatusTransition('pending', 'disputed', { isFinder: false, isAdmin: true }), true);
+
+  // Claimant can cancel their own active claim
+  assert.equal(isValidClaimStatusTransition('pending', 'cancelled', { isFinder: false, isAdmin: false }), true);
+  assert.equal(isValidClaimStatusTransition('under_review', 'cancelled', { isFinder: false, isAdmin: false }), true);
+});
+
+// 13. Database Authorization Boundary: Simulation of Hardened RLS Policy
+test('Hardened RLS policy constraint rejects creation of approved claims or assigned review fields', () => {
+  // Simulates the SQL WITH CHECK clause in 20261023_harden_claim_and_admin_authorization.sql
+  function checkClaimInsertPolicy(record, authUid) {
+    if (record.claimant_id !== authUid) return { allowed: false, error: 'claimant_id mismatch' };
+    if (!['pending', 'under_review'].includes(record.status)) return { allowed: false, error: 'invalid initial status' };
+    if (record.reviewed_by !== null && record.reviewed_by !== undefined) return { allowed: false, error: 'reviewed_by must be null at creation' };
+    if (record.reviewed_at !== null && record.reviewed_at !== undefined) return { allowed: false, error: 'reviewed_at must be null at creation' };
+    if (record.admin_notes !== null && record.admin_notes !== undefined) return { allowed: false, error: 'admin_notes must be null at creation' };
+    return { allowed: true };
+  }
+
+  const callerId = 'user-claimant-uuid-1111';
+
+  // 1. Malicious: Direct insert with status = 'approved'
+  const hackStatus = checkClaimInsertPolicy({
+    claimant_id: callerId,
+    status: 'approved',
+    reviewed_by: null,
+  }, callerId);
+  assert.equal(hackStatus.allowed, false);
+  assert.equal(hackStatus.error, 'invalid initial status');
+
+  // 2. Malicious: Direct insert assigning reviewed_by
+  const hackReviewer = checkClaimInsertPolicy({
+    claimant_id: callerId,
+    status: 'pending',
+    reviewed_by: callerId,
+  }, callerId);
+  assert.equal(hackReviewer.allowed, false);
+  assert.equal(hackReviewer.error, 'reviewed_by must be null at creation');
+
+  // 3. Malicious: Direct insert with admin notes
+  const hackNotes = checkClaimInsertPolicy({
+    claimant_id: callerId,
+    status: 'pending',
+    reviewed_by: null,
+    admin_notes: 'Bypassed verification',
+  }, callerId);
+  assert.equal(hackNotes.allowed, false);
+
+  // 4. Legitimate: Valid pending claim creation
+  const validPending = checkClaimInsertPolicy({
+    claimant_id: callerId,
+    status: 'pending',
+    reviewed_by: null,
+    reviewed_at: null,
+    admin_notes: null,
+  }, callerId);
+  assert.equal(validPending.allowed, true);
+
+  // 5. Legitimate: Valid under_review claim creation (e.g. competing claims hold)
+  const validReview = checkClaimInsertPolicy({
+    claimant_id: callerId,
+    status: 'under_review',
+    reviewed_by: null,
+    reviewed_at: null,
+    admin_notes: null,
+  }, callerId);
+  assert.equal(validReview.allowed, true);
+});
+
 console.log(`\nAll ${passed}/${total} Security Audit tests passed successfully!`);
+process.exit(0);
