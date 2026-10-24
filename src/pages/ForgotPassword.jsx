@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle2, Loader2, KeyRound } from 'lucide-react';
+import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
@@ -37,8 +38,10 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="container" style={{ padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
+      <HeroAnimatedBackground variant="ambient" />
+      <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
+        <div className="glass-card form-entrance" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -56,21 +59,21 @@ export default function ForgotPassword() {
           <div style={{ textAlign: 'center' }}>
             <div 
               style={{ 
-                background: 'rgba(16, 185, 129, 0.15)', 
-                border: '1px solid rgba(16, 185, 129, 0.3)', 
+                background: 'var(--found-subtle)', 
+                border: '1px solid var(--found-border)', 
                 borderRadius: 'var(--radius-md)', 
                 padding: '1.25rem', 
                 marginBottom: '1.5rem',
                 textAlign: 'left',
                 display: 'flex',
                 gap: '0.75rem',
-                color: '#34d399'
+                color: 'var(--found-accent)'
               }}
               id="reset-success-notice"
             >
               <CheckCircle2 size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
-                <strong>Recovery email sent!</strong><br />
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                <strong style={{ color: 'var(--found-accent)' }}>Recovery email sent!</strong><br />
                 We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and click the link to choose a new password.
               </div>
             </div>
@@ -85,15 +88,15 @@ export default function ForgotPassword() {
             {error && (
               <div 
                 style={{ 
-                  background: 'rgba(244, 63, 94, 0.15)', 
-                  border: '1px solid rgba(244, 63, 94, 0.3)', 
+                  background: 'var(--lost-subtle)', 
+                  border: '1px solid var(--lost-border)', 
                   borderRadius: 'var(--radius-md)', 
                   padding: '0.85rem 1rem', 
                   marginBottom: '1.25rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.6rem',
-                  color: '#fb7185',
+                  color: 'var(--lost-accent)',
                   fontSize: '0.88rem'
                 }}
                 id="forgot-password-error-banner"
@@ -159,5 +162,6 @@ export default function ForgotPassword() {
 
       </div>
     </div>
+  </div>
   );
 }

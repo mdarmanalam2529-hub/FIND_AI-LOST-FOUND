@@ -104,9 +104,9 @@ export default function Navbar() {
               {user ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      <User size={16} color="var(--primary-light)" />
-                      <span style={{ fontWeight: 600, color: '#ffffff' }}>{displayName}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      <User size={16} color="var(--primary)" />
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{displayName}</span>
                     </div>
                     <NotificationsDropdown />
                   </div>
@@ -156,15 +156,17 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  padding: '0.4rem 0.85rem',
+                  padding: '0.35rem 0.85rem',
                   borderRadius: 'var(--radius-full)',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'var(--bg-subtle)',
                   border: '1px solid var(--border-subtle)',
-                  fontSize: '0.85rem'
+                  fontSize: '0.85rem',
+                  color: 'var(--text-main)',
+                  fontWeight: 500,
                 }}
                 id="desktop-user-pill"
               >
-                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
                   {displayName.charAt(0).toUpperCase()}
                 </div>
                 <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

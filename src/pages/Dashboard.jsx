@@ -6,8 +6,9 @@ import ItemImage from '../components/ItemImage';
 import ClaimsManager from '../components/ClaimsManager';
 import ClaimModal from '../components/ClaimModal';
 import TiltCard from '../components/TiltCard';
+import AiMatchingVisualizer from '../components/AiMatchingVisualizer';
+import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 import { 
-  LayoutDashboard, 
   Sparkles, 
   Search, 
   UploadCloud, 
@@ -32,16 +33,13 @@ import {
   ImageIcon, 
   Maximize2,
   ChevronDown,
-  ChevronUp,
-  Info,
-  RefreshCw,
-  Activity
+  RefreshCw
 } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('my-reports'); // 'my-reports' | 'community-feed' | 'claims'
+  const [activeTab, setActiveTab] = useState('my-reports'); // 'my-reports' | 'ai-matches' | 'community-feed' | 'claims'
   const [claimingFoundItem, setClaimingFoundItem] = useState(null);
   const [preselectedLostItem, setPreselectedLostItem] = useState(null);
   const [userReports, setUserReports] = useState([]);
@@ -68,11 +66,13 @@ export default function Dashboard() {
   const [updating, setUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  // AI Matching Modal State
+  // AI Matching State
+  const [selectedMatchItem, setSelectedMatchItem] = useState(null);
   const [matchingTarget, setMatchingTarget] = useState(null);
   const [matchingLoading, setMatchingLoading] = useState(false);
   const [matchingError, setMatchingError] = useState(null);
   const [matchResults, setMatchResults] = useState([]);
+  const [matchesCache, setMatchesCache] = useState({});
   const [expandedBreakdowns, setExpandedBreakdowns] = useState({});
 
   const fullName = user?.user_metadata?.full_name || 'Community Member';
@@ -112,16 +112,27 @@ export default function Dashboard() {
   }, [user]);
 
   // Handle AI Matching
-  const handleFindMatches = async (item) => {
+  const handleFindMatches = async (item, forceRefresh = false) => {
+    if (!item) return;
+    setSelectedMatchItem(item);
     setMatchingTarget(item);
-    setMatchingLoading(true);
     setMatchingError(null);
+
+    // If already cached and not force refreshing, use cached results
+    if (!forceRefresh && matchesCache[item.id]) {
+      setMatchResults(matchesCache[item.id]);
+      return;
+    }
+
+    setMatchingLoading(true);
     setMatchResults([]);
     setExpandedBreakdowns({});
 
     try {
       const data = await itemsService.findMatches(item.id, { limit: 10 });
-      setMatchResults(data.matches || []);
+      const results = data.matches || [];
+      setMatchResults(results);
+      setMatchesCache((prev) => ({ ...prev, [item.id]: results }));
     } catch (err) {
       console.error('[Dashboard] Error finding matches:', err);
       setMatchingError(err.message || 'Failed to calculate candidate matches.');
@@ -129,6 +140,16 @@ export default function Dashboard() {
       setMatchingLoading(false);
     }
   };
+
+  // Auto-select first open report when switching to ai-matches tab if none selected
+  useEffect(() => {
+    if (activeTab === 'ai-matches' && !selectedMatchItem && userReports.length > 0) {
+      const firstOpen = userReports.find((r) => r.status === 'open') || userReports[0];
+      if (firstOpen) {
+        handleFindMatches(firstOpen);
+      }
+    }
+  }, [activeTab, userReports, selectedMatchItem]);
 
   const toggleBreakdown = (candidateId) => {
     setExpandedBreakdowns((prev) => ({
@@ -240,7 +261,11 @@ export default function Dashboard() {
   const resolvedCount = userReports.filter((i) => i.status === 'returned' || i.status === 'matched').length;
 
   return (
-    <div className="container" style={{ padding: '3rem 1.5rem 5rem' }} id="dashboard-page">
+    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
+      {/* Softly animated background for authenticated dashboard */}
+      <HeroAnimatedBackground variant="ambient" />
+
+      <div className="container" style={{ position: 'relative', zIndex: 1, padding: '3rem 1.5rem 5rem' }} id="dashboard-page">
       
       {/* Table Missing Notice Alert */}
       {tableError && (
@@ -256,9 +281,9 @@ export default function Dashboard() {
           }}
           id="dashboard-table-missing-alert"
         >
-          <AlertCircle size={24} color="#facc15" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <AlertCircle size={24} color="var(--warning-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
-            <h4 style={{ color: '#fef08a', fontSize: '1.05rem', marginBottom: '0.35rem' }}>
+            <h4 style={{ color: 'var(--warning-accent)', fontSize: '1.05rem', marginBottom: '0.35rem' }}>
               Action Required: Database Migration Pending
             </h4>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
@@ -275,64 +300,78 @@ export default function Dashboard() {
       <div 
         className="glass-card" 
         style={{ 
-          marginBottom: '2.5rem', 
-          borderColor: 'rgba(99, 102, 241, 0.3)', 
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%)', 
+          marginBottom: '2rem', 
+          borderColor: 'var(--border-subtle)', 
+          background: 'var(--bg-surface)', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
           gap: '1.5rem',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          boxShadow: 'var(--shadow-sm)'
         }}
         id="dashboard-user-card"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <div 
             style={{ 
-              width: '54px', 
-              height: '54px', 
-              borderRadius: '16px', 
-              background: 'var(--primary-gradient)', 
+              width: '52px', 
+              height: '52px', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'var(--primary)', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              fontSize: '1.4rem',
+              fontSize: '1.35rem',
               fontWeight: 800,
               color: '#ffffff',
-              boxShadow: 'var(--shadow-glow)'
             }}
           >
             {fullName.charAt(0).toUpperCase()}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '1.35rem' }}>Welcome, {fullName}</h2>
+              <h2 style={{ fontSize: '1.35rem', color: 'var(--text-main)' }}>Welcome, {fullName}</h2>
               {isEmailVerified ? (
                 <span className="badge badge-found" title="Email verified in Supabase">
-                  <ShieldCheck size={14} /> Verified
+                  <ShieldCheck size={14} /> Verified Account
                 </span>
               ) : (
-                <span className="badge badge-lost" title="Email confirmation pending">
+                <span className="badge badge-warning" title="Email confirmation pending">
                   <Mail size={14} /> Unconfirmed Email
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
               <span>{email}</span>
               <span>•</span>
               <span>Member since {memberSince}</span>
             </div>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        </div>        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            onClick={() => {
+              setActiveTab('ai-matches');
+              if (!selectedMatchItem && userReports.length > 0) {
+                const firstOpen = userReports.find((r) => r.status === 'open') || userReports[0];
+                if (firstOpen) {
+                  handleFindMatches(firstOpen);
+                }
+              }
+            }}
+            className={`btn ${activeTab === 'ai-matches' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+            id="dashboard-ai-matches-btn"
+          >
+            <Sparkles size={16} /> AI Matches
+          </button>
           <button 
             type="button" 
             onClick={() => setActiveTab('claims')}
             className="btn btn-secondary btn-sm"
             id="dashboard-claims-tab-btn"
           >
-            <ShieldCheck size={16} color="var(--primary-light)" /> Claims & Returns
+            <ShieldCheck size={16} color="var(--primary)" /> Claims &amp; Returns
           </button>
           <Link to="/report-lost" className="btn btn-lost btn-sm" id="dashboard-report-lost">
             <Search size={16} /> Report Lost Item
@@ -343,124 +382,157 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Metric Cards Grid with 3D Hover Tilt */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
-        <TiltCard maxTilt={5}>
-          <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
+      {/* Metric Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+        <TiltCard maxTilt={2}>
+          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Active Lost Reports</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Active Lost Reports</span>
               <span className="badge badge-lost">{activeLostCount} Active</span>
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }}>{activeLostCount}</div>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{activeLostCount}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
               Awaiting found matches
             </div>
           </div>
         </TiltCard>
 
-        <TiltCard maxTilt={5}>
-          <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
+        <TiltCard maxTilt={2}>
+          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Found Items Contributed</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Found Items Contributed</span>
               <span className="badge badge-found">{foundItemsCount} Items</span>
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }}>{foundItemsCount}</div>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{foundItemsCount}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
               Helping the community
             </div>
           </div>
         </TiltCard>
 
-        <TiltCard maxTilt={5}>
-          <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
+        <TiltCard maxTilt={2}>
+          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Community Open Feed</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Community Open Feed</span>
               <span className="badge badge-primary">{communityReports.length} Open</span>
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }} className="gradient-text">{communityReports.length}</div>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--primary)' }}>{communityReports.length}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
               Public listings registered
             </div>
           </div>
         </TiltCard>
 
-        <TiltCard maxTilt={5}>
-          <div className="glass-card" style={{ padding: '1.5rem', height: '100%' }}>
+        <TiltCard maxTilt={2}>
+          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Resolved & Returned</span>
-              <CheckCircle2 size={18} color="#10b981" />
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Resolved &amp; Returned</span>
+              <CheckCircle2 size={18} color="var(--found-accent)" />
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }}>{resolvedCount}</div>
-            <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{resolvedCount}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
               Reunited cases
             </div>
           </div>
         </TiltCard>
       </div>
 
-      {/* Tabs: My Reports vs Community Open Feed */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+      {/* Tabs: My Reports vs AI Matches vs Community Open Feed vs Claims */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setActiveTab('my-reports')}
           style={{
-            background: 'none',
+            background: activeTab === 'my-reports' ? 'var(--primary-subtle)' : 'transparent',
             border: 'none',
-            color: activeTab === 'my-reports' ? '#ffffff' : 'var(--text-muted)',
+            color: activeTab === 'my-reports' ? 'var(--primary)' : 'var(--text-muted)',
             fontWeight: 600,
-            fontSize: '1rem',
+            fontSize: '0.94rem',
             cursor: 'pointer',
-            padding: '0.4rem 0.8rem',
-            borderBottom: activeTab === 'my-reports' ? '2px solid var(--primary)' : '2px solid transparent',
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            transition: 'all 0.15s ease',
           }}
           id="tab-my-reports"
         >
-          <Layers size={18} /> My Reports ({userReports.length})
+          <Layers size={17} /> My Reports ({userReports.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('ai-matches');
+            if (!selectedMatchItem && userReports.length > 0) {
+              const firstOpen = userReports.find((r) => r.status === 'open') || userReports[0];
+              if (firstOpen) {
+                handleFindMatches(firstOpen);
+              }
+            }
+          }}
+          style={{
+            background: activeTab === 'ai-matches' ? 'var(--primary-subtle)' : 'transparent',
+            border: 'none',
+            color: activeTab === 'ai-matches' ? 'var(--primary)' : 'var(--text-muted)',
+            fontWeight: 600,
+            fontSize: '0.94rem',
+            cursor: 'pointer',
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.15s ease',
+          }}
+          id="tab-ai-matches"
+        >
+          <Sparkles size={17} color={activeTab === 'ai-matches' ? 'var(--primary)' : 'currentColor'} /> AI Matches
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('community-feed')}
           style={{
-            background: 'none',
+            background: activeTab === 'community-feed' ? 'var(--primary-subtle)' : 'transparent',
             border: 'none',
-            color: activeTab === 'community-feed' ? '#ffffff' : 'var(--text-muted)',
+            color: activeTab === 'community-feed' ? 'var(--primary)' : 'var(--text-muted)',
             fontWeight: 600,
-            fontSize: '1rem',
+            fontSize: '0.94rem',
             cursor: 'pointer',
-            padding: '0.4rem 0.8rem',
-            borderBottom: activeTab === 'community-feed' ? '2px solid var(--primary)' : '2px solid transparent',
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            transition: 'all 0.15s ease',
           }}
           id="tab-community-feed"
         >
-          <Globe size={18} /> Community Open Feed ({communityReports.length})
+          <Globe size={17} /> Community Open Feed ({communityReports.length})
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('claims')}
           style={{
-            background: 'none',
+            background: activeTab === 'claims' ? 'var(--primary-subtle)' : 'transparent',
             border: 'none',
-            color: activeTab === 'claims' ? '#ffffff' : 'var(--text-muted)',
+            color: activeTab === 'claims' ? 'var(--primary)' : 'var(--text-muted)',
             fontWeight: 600,
-            fontSize: '1rem',
+            fontSize: '0.94rem',
             cursor: 'pointer',
-            padding: '0.4rem 0.8rem',
-            borderBottom: activeTab === 'claims' ? '2px solid var(--primary)' : '2px solid transparent',
+            padding: '0.5rem 1rem',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            transition: 'all 0.15s ease',
           }}
           id="tab-claims-returns"
         >
-          <ShieldCheck size={18} color="var(--primary-light)" /> Claims & Returns
+          <ShieldCheck size={17} color={activeTab === 'claims' ? 'var(--primary)' : 'currentColor'} /> Claims &amp; Returns
         </button>
       </div>
 
@@ -482,8 +554,8 @@ export default function Dashboard() {
         /* MY REPORTS LIST */
         userReports.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <Sparkles size={24} color="var(--primary-light)" />
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+              <Sparkles size={24} color="var(--primary)" />
             </div>
             <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>You have not reported any items yet</h4>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '440px', margin: '0 auto 1.5rem' }}>
@@ -526,27 +598,22 @@ export default function Dashboard() {
                       {item.item_type === 'lost' ? 'Lost Item' : 'Found Item'}
                     </span>
                     <span 
-                      className="badge" 
-                      style={{ 
-                        background: item.status === 'open' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                        color: item.status === 'open' ? 'var(--primary-light)' : '#34d399',
-                        border: '1px solid currentColor'
-                      }}
+                      className={`badge ${item.status === 'open' ? 'badge-primary' : 'badge-found'}`}
                     >
                       Status: {item.status.toUpperCase()}
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>{item.title}</h3>
+                  <h3 style={{ fontSize: '1.18rem', marginBottom: '0.45rem', color: 'var(--text-main)' }}>{item.title}</h3>
                   
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.2rem', flex: 1, whiteSpace: 'pre-wrap' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.15rem', flex: 1, whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
                     {item.description}
                   </p>
 
                   {/* Details Footer */}
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <MapPin size={14} color="#f43f5e" />
+                      <MapPin size={14} color="var(--lost-accent)" />
                       <span>{item.location_description}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -563,7 +630,11 @@ export default function Dashboard() {
                   {item.status === 'open' && (
                     <button
                       type="button"
-                      onClick={() => handleFindMatches(item)}
+                      onClick={() => {
+                        setSelectedMatchItem(item);
+                        setActiveTab('ai-matches');
+                        handleFindMatches(item);
+                      }}
                       className="btn btn-primary btn-sm"
                       style={{ width: '100%', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
                       id={`btn-match-${item.id}`}
@@ -587,7 +658,7 @@ export default function Dashboard() {
                       onClick={() => handleDelete(item)}
                       disabled={deletingId === item.id}
                       className="btn btn-secondary btn-sm"
-                      style={{ color: '#fb7185', borderColor: 'rgba(244, 63, 94, 0.3)' }}
+                      style={{ color: 'var(--lost-accent)', borderColor: 'var(--lost-border)' }}
                       title="Delete report"
                     >
                       {deletingId === item.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
@@ -598,12 +669,254 @@ export default function Dashboard() {
             ))}
           </div>
         )
+      ) : activeTab === 'ai-matches' ? (
+        /* AI MATCHES & MATCHING ACTIVITY SECTION */
+        <div className="ai-matches-section-container" id="dashboard-ai-matches-section">
+          {/* Header */}
+          <div 
+            className="glass-card" 
+            style={{ 
+              marginBottom: '1.75rem', 
+              padding: '1.5rem', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              flexWrap: 'wrap',
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-surface)' 
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span className="badge badge-primary">
+                  <Sparkles size={13} /> Multimodal Intelligence
+                </span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Authenticated Vector Matching
+                </span>
+              </div>
+              <h3 style={{ fontSize: '1.35rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                AI Matches &amp; Matching Activity
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.25rem 0 0', maxWidth: '640px', lineHeight: 1.5 }}>
+                Our backend embeddings compare your item descriptions, categories, and photographs with open community reports to surface candidate similarities.
+              </p>
+            </div>
+
+            {selectedMatchItem && (
+              <button
+                type="button"
+                onClick={() => handleFindMatches(selectedMatchItem, true)}
+                className="btn btn-secondary btn-sm"
+                disabled={matchingLoading}
+                id="btn-refresh-ai-matches"
+                title="Re-run matching search against latest open reports"
+              >
+                <RefreshCw size={14} className={matchingLoading ? 'spin' : ''} /> {matchingLoading ? 'Scanning...' : 'Refresh Matches'}
+              </button>
+            )}
+          </div>
+
+          {/* User has NO reports at all */}
+          {userReports.length === 0 ? (
+            <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                <Sparkles size={26} color="var(--primary)" />
+              </div>
+              <h4 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                No Active Reports to Match
+              </h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
+                Our AI matching engine requires an active lost or found item to analyze semantic and visual similarities. Report an item to begin receiving automated match recommendations.
+              </p>
+              <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link to="/report-lost" className="btn btn-lost btn-sm" id="ai-matches-empty-report-lost">
+                  <Search size={15} /> Report Lost Item
+                </Link>
+                <Link to="/report-found" className="btn btn-found btn-sm" id="ai-matches-empty-report-found">
+                  <UploadCloud size={15} /> Report Found Item
+                </Link>
+              </div>
+            </div>
+          ) : userReports.filter((r) => r.status === 'open').length === 0 ? (
+            /* User has reports, but none are open */
+            <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--found-subtle)', border: '1px solid var(--found-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                <CheckCircle2 size={26} color="var(--found-accent)" />
+              </div>
+              <h4 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                All Current Reports Are Resolved
+              </h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.55 }}>
+                You have no currently open reports waiting for matches. When you file a new lost or found report, candidate matches will automatically appear here.
+              </p>
+              <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link to="/report-lost" className="btn btn-lost btn-sm">
+                  <Search size={15} /> Report Lost Item
+                </Link>
+                <Link to="/report-found" className="btn btn-found btn-sm">
+                  <UploadCloud size={15} /> Report Found Item
+                </Link>
+              </div>
+            </div>
+          ) : (
+            /* User has open reports: Show Report Selector and AiMatchingVisualizer */
+            <div>
+              {/* Report Selection Pills */}
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.65rem', 
+                  overflowX: 'auto', 
+                  paddingBottom: '0.75rem', 
+                  marginBottom: '1.25rem' 
+                }}
+              >
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  Analyze Report:
+                </span>
+                {userReports
+                  .filter((r) => r.status === 'open')
+                  .map((item) => {
+                    const isSelected = selectedMatchItem?.id === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleFindMatches(item)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: 'var(--radius-full)',
+                          background: isSelected ? 'var(--primary-subtle)' : 'var(--bg-surface)',
+                          border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
+                          color: isSelected ? 'var(--primary)' : 'var(--text-secondary)',
+                          fontSize: '0.85rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                        id={`select-match-report-${item.id}`}
+                      >
+                        <span className={item.item_type === 'lost' ? 'badge badge-lost' : 'badge badge-found'} style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                          {item.item_type === 'lost' ? 'Lost' : 'Found'}
+                        </span>
+                        <span>{item.title}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Target Report Context Bar */}
+              {selectedMatchItem && (
+                <div 
+                  className="glass-card" 
+                  style={{ 
+                    padding: '1rem 1.25rem', 
+                    marginBottom: '1.5rem', 
+                    background: 'var(--bg-subtle)', 
+                    border: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span className={selectedMatchItem.item_type === 'lost' ? 'badge badge-lost' : 'badge badge-found'}>
+                      {selectedMatchItem.item_type === 'lost' ? 'Lost Report' : 'Found Report'}
+                    </span>
+                    <strong style={{ fontSize: '0.98rem', color: 'var(--text-main)' }}>{selectedMatchItem.title}</strong>
+                    {selectedMatchItem.category && (
+                      <span className="badge badge-neutral" style={{ textTransform: 'capitalize' }}>
+                        <Tag size={11} /> {selectedMatchItem.category}
+                      </span>
+                    )}
+                    {selectedMatchItem.location_description && (
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <MapPin size={13} color="var(--primary)" /> {selectedMatchItem.location_description}
+                      </span>
+                    )}
+                  </div>
+
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                    Scanning candidate open {selectedMatchItem.item_type === 'lost' ? 'found' : 'lost'} items across community
+                  </span>
+                </div>
+              )}
+
+              {/* Matching Error Banner */}
+              {matchingError ? (
+                <div 
+                  style={{ 
+                    background: 'var(--lost-subtle)', 
+                    border: '1px solid var(--lost-border)', 
+                    borderRadius: 'var(--radius-md)', 
+                    padding: '1.25rem', 
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '1rem',
+                    color: 'var(--lost-accent)'
+                  }}
+                >
+                  <AlertCircle size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ fontSize: '1.05rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>Matching Error</h4>
+                    <p style={{ fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {matchingError}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleFindMatches(selectedMatchItem, true)}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      <RefreshCw size={14} /> Retry Search
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Reusing the production AiMatchingVisualizer */
+                <AiMatchingVisualizer
+                  isLoading={matchingLoading}
+                  results={matchResults}
+                  expandedBreakdowns={expandedBreakdowns}
+                  onToggleBreakdown={toggleBreakdown}
+                  renderCandidateActions={(candidate) => (
+                    <>
+                      {selectedMatchItem?.item_type === 'lost' && candidate.user_id !== user?.id && candidate.item_type === 'found' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClaimingFoundItem(candidate);
+                            setPreselectedLostItem(selectedMatchItem);
+                          }}
+                          className="btn btn-primary btn-sm"
+                          id={`ai-match-claim-${candidate.id}`}
+                        >
+                          <ShieldCheck size={14} /> Claim This Item
+                        </button>
+                      )}
+                    </>
+                  )}
+                />
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         /* COMMUNITY OPEN FEED */
         communityReports.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <Globe size={24} color="var(--primary-light)" />
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+              <Globe size={24} color="var(--primary)" />
             </div>
             <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No open community reports right now</h4>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '440px', margin: '0 auto' }}>
@@ -641,15 +954,15 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>{item.title}</h3>
+                  <h3 style={{ fontSize: '1.18rem', marginBottom: '0.45rem', color: 'var(--text-main)' }}>{item.title}</h3>
                   
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.2rem', flex: 1, whiteSpace: 'pre-wrap' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.15rem', flex: 1, whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
                     {item.description}
                   </p>
 
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <MapPin size={14} color="#f43f5e" />
+                      <MapPin size={14} color={item.item_type === 'lost' ? 'var(--lost-accent)' : 'var(--found-accent)'} />
                       <span>{item.location_description}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -707,8 +1020,9 @@ export default function Dashboard() {
           style={{ 
             position: 'fixed', 
             inset: 0, 
-            background: 'rgba(0, 0, 0, 0.85)', 
-            backdropFilter: 'blur(10px)', 
+            background: 'rgba(15, 23, 42, 0.45)', 
+            backdropFilter: 'blur(8px)', 
+            WebkitBackdropFilter: 'blur(8px)',
             zIndex: 150, 
             display: 'flex', 
             alignItems: 'center', 
@@ -726,7 +1040,10 @@ export default function Dashboard() {
               maxHeight: '90vh', 
               display: 'flex', 
               flexDirection: 'column', 
-              overflow: 'hidden' 
+              overflow: 'hidden',
+              background: 'var(--bg-surface)',
+              boxShadow: 'var(--shadow-modal)',
+              border: '1px solid var(--border-subtle)',
             }}
           >
             {/* Modal Header */}
@@ -736,22 +1053,22 @@ export default function Dashboard() {
                   <div className="brand-icon-wrap" style={{ width: '28px', height: '28px' }}>
                     <Sparkles size={16} color="#fff" />
                   </div>
-                  <h3 style={{ fontSize: '1.35rem' }}>AI Match Intelligence</h3>
+                  <h3 style={{ fontSize: '1.3rem', color: 'var(--text-main)' }}>AI Match Intelligence</h3>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
                   <span>Matching for:</span>
-                  <span style={{ color: '#fff', fontWeight: 600 }}>{matchingTarget.title}</span>
+                  <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{matchingTarget.title}</span>
                   <span className={matchingTarget.item_type === 'lost' ? 'badge badge-lost' : 'badge badge-found'} style={{ fontSize: '0.75rem' }}>
-                    {matchingTarget.item_type === 'lost' ? 'Lost' : 'Found'}
+                    {matchingTarget.item_type === 'lost' ? 'Lost Item' : 'Found Item'}
                   </span>
-                  <span>• Scanning candidate <strong>{matchingTarget.item_type === 'lost' ? 'found' : 'lost'}</strong> items</span>
+                  <span>• Scanning candidate <strong>{matchingTarget.item_type === 'lost' ? 'found' : 'lost'}</strong> reports</span>
                 </div>
               </div>
 
               <button 
                 type="button" 
                 onClick={() => setMatchingTarget(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '0.2rem' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.2rem' }}
                 aria-label="Close matches modal"
                 id="btn-close-matches"
               >
@@ -761,427 +1078,62 @@ export default function Dashboard() {
 
             {/* Modal Content Scroll Area */}
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.4rem' }}>
-              
-              {/* State 1: 3D Holographic Radar Scanning State */}
-              {matchingLoading && (
-                <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                  {/* Holographic 3D Radar Scanner */}
-                  <div 
-                    style={{
-                      position: 'relative',
-                      width: '130px',
-                      height: '130px',
-                      margin: '0 auto 1.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      perspective: '600px',
-                    }}
-                  >
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        inset: '-15%',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.1) 60%, transparent 80%)',
-                        filter: 'blur(16px)',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <div 
-                      className="radar-ring-outer"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '50%',
-                        border: '2px dashed rgba(6, 182, 212, 0.45)',
-                        animation: 'radarSpin3D 6s linear infinite',
-                      }}
-                    />
-                    <div 
-                      className="radar-ring-middle"
-                      style={{
-                        position: 'absolute',
-                        inset: '14px',
-                        borderRadius: '50%',
-                        border: '1px solid rgba(99, 102, 241, 0.4)',
-                        transform: 'rotateX(55deg)',
-                        animation: 'counterSpin3D 8s linear infinite',
-                      }}
-                    />
-                    <div 
-                      style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '50%',
-                        background: 'var(--primary-gradient)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 25px rgba(6, 182, 212, 0.6)',
-                        zIndex: 3,
-                      }}
-                    >
-                      <Activity size={24} color="#ffffff" className="spin-pulse" />
-                    </div>
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        width: '60px',
-                        height: '2px',
-                        background: 'linear-gradient(90deg, #06b6d4, transparent)',
-                        transformOrigin: '0 0',
-                        animation: 'radarSweep 2.2s linear infinite',
-                        boxShadow: '0 0 8px #06b6d4',
-                      }}
-                    />
-                  </div>
-
-                  {/* Target Item Scanning Card with Laser Line */}
-                  <div 
-                    className="glass-card" 
-                    style={{ 
-                      maxWidth: '460px', 
-                      margin: '0 auto 1.5rem', 
-                      padding: '1rem 1.25rem', 
-                      textAlign: 'left', 
-                      position: 'relative', 
-                      overflow: 'hidden',
-                      border: '1px solid rgba(6, 182, 212, 0.3)',
-                    }}
-                  >
-                    <div className="scanner-laser-bar" />
-                    <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
-                      Active Scanner Target
-                    </div>
-                    <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>{matchingTarget.title}</div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {matchingTarget.description}
-                    </div>
-                  </div>
-
-                  <h4 style={{ fontSize: '1.2rem', marginBottom: '0.4rem', color: '#fff' }}>Extracting Semantic & Visual Embeddings...</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>
-                    Comparing descriptions using 384-dimensional text vectors, evaluating CLIP visual similarity for attached photos, and scoring category, color, date, and location overlap.
-                  </p>
-                </div>
-              )}
-
-              {/* State 2: Error */}
-              {!matchingLoading && matchingError && (
+              {matchingError ? (
                 <div 
                   style={{ 
-                    background: 'rgba(244, 63, 94, 0.12)', 
-                    border: '1px solid rgba(244, 63, 94, 0.3)', 
+                    background: 'var(--lost-subtle)', 
+                    border: '1px solid var(--lost-border)', 
                     borderRadius: 'var(--radius-md)', 
-                    padding: '1.5rem', 
-                    margin: '1.5rem 0',
+                    padding: '1.25rem', 
+                    margin: '1.25rem 0',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '1rem',
-                    color: '#fb7185'
+                    color: 'var(--lost-accent)'
                   }}
                   id="matching-error-banner"
                 >
-                  <AlertCircle size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <AlertCircle size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ fontSize: '1.05rem', marginBottom: '0.25rem', color: '#fff' }}>Matching Service Error</h4>
-                    <p style={{ fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1rem' }}>
+                    <h4 style={{ fontSize: '1.05rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>Matching Service Error</h4>
+                    <p style={{ fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '0.85rem', color: 'var(--text-secondary)' }}>
                       {matchingError}
                     </p>
                     <button
                       type="button"
                       onClick={() => handleFindMatches(matchingTarget)}
                       className="btn btn-secondary btn-sm"
-                      style={{ color: '#fff' }}
                     >
                       <RefreshCw size={14} /> Retry Search
                     </button>
                   </div>
                 </div>
-              )}
-
-              {/* State 3: Empty Candidate Results */}
-              {!matchingLoading && !matchingError && matchResults.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-                    <Search size={24} color="var(--primary-light)" />
-                  </div>
-                  <h4 style={{ fontSize: '1.2rem', marginBottom: '0.4rem' }}>No Candidate Matches Found</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '460px', margin: '0 auto 1rem' }}>
-                    We scanned all active {matchingTarget.item_type === 'lost' ? 'found' : 'lost'} reports in the database, but none currently show strong correlation with your item.
-                  </p>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    Tip: As other users submit matching reports, they will become discoverable here.
-                  </span>
-                </div>
-              )}
-
-              {/* State 4: Ranked Candidates List */}
-              {!matchingLoading && !matchingError && matchResults.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
-                  
-                  {/* Results Count Summary Banner */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255, 255, 255, 0.03)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      Identified <strong style={{ color: '#fff' }}>{matchResults.length}</strong> ranked candidate {matchingTarget.item_type === 'lost' ? 'found' : 'lost'} reports
-                    </span>
-                    <button 
-                      type="button" 
-                      onClick={() => handleFindMatches(matchingTarget)}
-                      style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
-                    >
-                      <RefreshCw size={13} /> Refresh
-                    </button>
-                  </div>
-
-                  {/* Candidate Cards with 3D Tilt & Staggered Reveal */}
-                  {matchResults.map((candidate, idx) => {
-                    const isExpanded = Boolean(expandedBreakdowns[candidate.id]);
-                    const score = candidate.score;
-                    const badgeStyle = score >= 70 
-                      ? { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399', border: 'rgba(16, 185, 129, 0.35)' }
-                      : score >= 50 
-                      ? { bg: 'rgba(99, 102, 241, 0.15)', text: 'var(--primary-light)', border: 'rgba(99, 102, 241, 0.35)' }
-                      : { bg: 'rgba(234, 179, 8, 0.15)', text: '#facc15', border: 'rgba(234, 179, 8, 0.35)' };
-
-                    const radius = 20;
-                    const circumference = 2 * Math.PI * radius;
-                    const strokeDashoffset = circumference - (score / 100) * circumference;
-
-                    return (
-                      <TiltCard
-                        key={candidate.id}
-                        maxTilt={4}
-                        scale={1.01}
-                        style={{
-                          animation: `cardFadeInUp 0.4s ease-out ${idx * 0.08}s both`,
-                        }}
-                      >
-                        <div 
-                          style={{ 
-                            background: 'rgba(18, 24, 38, 0.85)', 
-                            border: '1px solid var(--border-subtle)', 
-                            borderRadius: 'var(--radius-md)', 
-                            padding: '1.25rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.75rem',
-                            position: 'relative',
-                            overflow: 'hidden',
+              ) : (
+                <AiMatchingVisualizer
+                  isLoading={matchingLoading}
+                  results={matchResults}
+                  expandedBreakdowns={expandedBreakdowns}
+                  onToggleBreakdown={toggleBreakdown}
+                  renderCandidateActions={(candidate) => (
+                    <>
+                      {matchingTarget?.item_type === 'lost' && candidate.user_id !== user?.id && candidate.item_type === 'found' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClaimingFoundItem(candidate);
+                            setPreselectedLostItem(matchingTarget);
+                            setMatchingTarget(null);
                           }}
+                          className="btn btn-primary btn-sm"
+                          id={`ai-match-claim-${candidate.id}`}
                         >
-                          {score >= 70 && (
-                            <div 
-                              style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '3px',
-                                height: '100%',
-                                background: 'linear-gradient(180deg, #10b981 0%, #06b6d4 100%)',
-                                boxShadow: '0 0 10px #10b981',
-                              }}
-                            />
-                          )}
-
-                          {/* Candidate Card Header */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                              {/* SVG Radial Confidence Meter */}
-                              <div style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
-                                  <circle
-                                    cx="24"
-                                    cy="24"
-                                    r={radius}
-                                    fill="transparent"
-                                    stroke="rgba(255, 255, 255, 0.08)"
-                                    strokeWidth="3.5"
-                                  />
-                                  <circle
-                                    cx="24"
-                                    cy="24"
-                                    r={radius}
-                                    fill="transparent"
-                                    stroke={badgeStyle.text}
-                                    strokeWidth="3.5"
-                                    strokeDasharray={circumference}
-                                    strokeDashoffset={strokeDashoffset}
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                                <span style={{ position: 'absolute', fontSize: '0.78rem', fontWeight: 800, color: badgeStyle.text }}>
-                                  {score}%
-                                </span>
-                              </div>
-
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                                  <span 
-                                    style={{ 
-                                      padding: '0.2rem 0.6rem', 
-                                      borderRadius: 'var(--radius-full)', 
-                                      fontSize: '0.8rem', 
-                                      fontWeight: 700, 
-                                      background: badgeStyle.bg, 
-                                      color: badgeStyle.text,
-                                      border: `1px solid ${badgeStyle.border}`,
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '0.3rem'
-                                    }}
-                                  >
-                                    <Sparkles size={12} /> {score}% Similarity
-                                  </span>
-                                  <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                    #{idx + 1} Candidate
-                                  </span>
-                                </div>
-                                <h4 style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>
-                                  {candidate.title}
-                                </h4>
-                              </div>
-                            </div>
-
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <Calendar size={13} /> Incident Date: {candidate.incident_date}
-                            </span>
-                          </div>
-
-                          {/* Description */}
-                          <div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                              {candidate.description}
-                            </p>
-                          </div>
-
-                          {/* Metadata line */}
-                          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <MapPin size={13} color="#f43f5e" />
-                              <span>{candidate.location_description}</span>
-                            </div>
-                            {candidate.color && (
-                              <div>Color: <span style={{ color: '#fff' }}>{candidate.color}</span></div>
-                            )}
-                            <div>Category: <span style={{ color: '#fff' }}>{candidate.category}</span></div>
-                          </div>
-
-                          {/* Explanation Summary */}
-                          <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <span><strong>Key Signals:</strong> {candidate.explanation}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              {matchingTarget?.item_type === 'lost' && candidate.user_id !== user?.id && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setClaimingFoundItem(candidate);
-                                    setPreselectedLostItem(matchingTarget);
-                                    setMatchingTarget(null);
-                                  }}
-                                  className="btn btn-primary btn-sm"
-                                  style={{ fontSize: '0.78rem', padding: '0.2rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                                  id={`ai-match-claim-${candidate.id}`}
-                                >
-                                  <ShieldCheck size={13} /> Claim Item
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => toggleBreakdown(candidate.id)}
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem' }}
-                              >
-                                {isExpanded ? <>Hide Details <ChevronUp size={14} /></> : <>Score Details <ChevronDown size={14} /></>}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Expandable Multi-Factor Breakdown */}
-                          {isExpanded && candidate.breakdown && (
-                            <div 
-                              style={{ 
-                                background: 'rgba(0, 0, 0, 0.3)', 
-                                border: '1px solid var(--border-subtle)', 
-                                borderRadius: '8px', 
-                                padding: '1rem', 
-                                display: 'grid', 
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
-                                gap: '0.75rem',
-                                fontSize: '0.82rem'
-                              }}
-                            >
-                              <div>
-                                <div style={{ color: 'var(--text-dim)' }}>Semantic Text Match</div>
-                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{candidate.breakdown.textSimilarityPct}%</div>
-                              </div>
-                              {candidate.breakdown.imageEvaluated && typeof candidate.breakdown.imageSimilarityPct === 'number' && (
-                                <div>
-                                  <div style={{ color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    <Camera size={13} color="var(--primary-light)" />
-                                    <span>Visual / Photo Match</span>
-                                  </div>
-                                  <div style={{ fontWeight: 700, color: '#38bdf8', fontSize: '0.95rem' }}>
-                                    {candidate.breakdown.imageSimilarityPct}%
-                                  </div>
-                                </div>
-                              )}
-                              <div>
-                                <div style={{ color: 'var(--text-dim)' }}>Category Match</div>
-                                <div style={{ fontWeight: 700, color: candidate.breakdown.categoryMatch ? '#34d399' : '#fb7185', fontSize: '0.95rem' }}>
-                                  {candidate.breakdown.categoryMatch ? 'Exact Match (100%)' : 'Mismatch (0%)'}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ color: 'var(--text-dim)' }}>Color Score</div>
-                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{candidate.breakdown.colorScorePct}%</div>
-                              </div>
-                              <div>
-                                <div style={{ color: 'var(--text-dim)' }}>Date Proximity</div>
-                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{candidate.breakdown.dateProximityPct}%</div>
-                              </div>
-                              <div>
-                                <div style={{ color: 'var(--text-dim)' }}>Location Overlap</div>
-                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{candidate.breakdown.locationSimilarityPct}%</div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </TiltCard>
-                    );
-                  })}
-
-                  {/* Safety Disclaimer Banner */}
-                  <div 
-                    style={{ 
-                      background: 'rgba(99, 102, 241, 0.08)', 
-                      border: '1px solid rgba(99, 102, 241, 0.25)', 
-                      borderRadius: 'var(--radius-md)', 
-                      padding: '1rem 1.25rem', 
-                      display: 'flex', 
-                      alignItems: 'flex-start', 
-                      gap: '0.85rem',
-                      color: 'var(--text-muted)',
-                      fontSize: '0.85rem',
-                      lineHeight: 1.5,
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    <ShieldAlert size={22} color="var(--primary-light)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <div>
-                      <strong style={{ color: '#fff' }}>Verification Notice & Safety Policy:</strong>
-                      <p style={{ marginTop: '0.2rem' }}>
-                        Similarity scores are statistical algorithmic estimates provided to assist human review. A suggested match does NOT prove legal ownership.
-                        Reports are never automatically marked as returned or closed. Both parties must independently verify unique identifiers (serial hints, markings, distinctive scratches) before handoff.
-                      </p>
-                    </div>
-                  </div>
-
-                </div>
+                          <ShieldCheck size={14} /> Claim This Item
+                        </button>
+                      )}
+                    </>
+                  )}
+                />
               )}
-
             </div>
 
             {/* Modal Footer */}
@@ -1204,8 +1156,9 @@ export default function Dashboard() {
           style={{ 
             position: 'fixed', 
             inset: 0, 
-            background: 'rgba(0, 0, 0, 0.75)', 
+            background: 'rgba(15, 23, 42, 0.45)', 
             backdropFilter: 'blur(8px)', 
+            WebkitBackdropFilter: 'blur(8px)',
             zIndex: 100, 
             display: 'flex', 
             alignItems: 'center', 
@@ -1213,13 +1166,26 @@ export default function Dashboard() {
             padding: '1.5rem' 
           }}
         >
-          <div className="glass-card" style={{ width: '100%', maxWidth: '520px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div 
+            className="glass-card" 
+            style={{ 
+              width: '100%', 
+              maxWidth: '520px', 
+              padding: '2rem', 
+              maxHeight: '90vh', 
+              overflowY: 'auto',
+              background: 'var(--bg-surface)',
+              boxShadow: 'var(--shadow-modal)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.3rem' }}>Edit Report</h3>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)' }}>Edit Report</h3>
               <button 
                 type="button" 
                 onClick={() => setEditingItem(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                aria-label="Close edit dialog"
               >
                 <X size={20} />
               </button>
@@ -1300,7 +1266,7 @@ export default function Dashboard() {
                         type="button"
                         onClick={() => setRemoveCurrentImage(true)}
                         className="btn btn-secondary btn-sm"
-                        style={{ color: '#fb7185', borderColor: 'rgba(244, 63, 94, 0.3)' }}
+                        style={{ color: 'var(--lost-accent)', borderColor: 'var(--lost-border)' }}
                       >
                         <Trash2 size={14} /> Remove Current Photo
                       </button>
@@ -1310,7 +1276,7 @@ export default function Dashboard() {
 
                 {/* Removed notice */}
                 {removeCurrentImage && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'rgba(244, 63, 94, 0.1)', borderRadius: '8px', marginBottom: '0.75rem', fontSize: '0.85rem', color: '#fb7185' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'var(--lost-subtle)', border: '1px solid var(--lost-border)', borderRadius: '8px', marginBottom: '0.75rem', fontSize: '0.85rem', color: 'var(--lost-accent)' }}>
                     <span>Current photo will be deleted on save.</span>
                     <button
                       type="button"
@@ -1474,6 +1440,7 @@ export default function Dashboard() {
         />
       )}
 
+      </div>
     </div>
   );
 }

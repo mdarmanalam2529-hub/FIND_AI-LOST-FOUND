@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Shield, Cpu, Mail, Heart } from 'lucide-react';
+import { ShieldCheck, Cpu, Lock, CheckCircle2 } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -9,14 +9,14 @@ export default function Footer() {
         <div className="footer-grid">
           {/* Brand Info */}
           <div className="footer-col">
-            <div className="brand-logo" style={{ marginBottom: '1rem' }}>
-              <div className="brand-icon-wrap">
-                <Sparkles size={18} color="#ffffff" />
+            <div className="brand-logo" style={{ marginBottom: '0.85rem' }}>
+              <div className="brand-icon-wrap" style={{ width: '32px', height: '32px' }}>
+                <ShieldCheck size={18} color="#ffffff" />
               </div>
               <span>Find<span className="gradient-text">AI</span></span>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '320px', lineHeight: 1.6 }}>
-              Next-generation lost and found intelligence platform powered by multimodal AI and semantic vector matching.
+              A privacy-conscious community lost-and-found platform. We assist recovery with open-source AI embeddings and verified proof handovers.
             </p>
           </div>
 
@@ -27,35 +27,36 @@ export default function Footer() {
               <li><Link to="/">Home</Link></li>
               <li><Link to="/report-lost">Report Lost Item</Link></li>
               <li><Link to="/report-found">Report Found Item</Link></li>
-              <li><Link to="/dashboard">Dashboard</Link></li>
+              <li><Link to="/dashboard">Community Dashboard</Link></li>
             </ul>
           </div>
 
-          {/* Account */}
+          {/* Account & Trust */}
           <div className="footer-col">
-            <h4>Account</h4>
+            <h4>Account & Trust</h4>
             <ul className="footer-links">
               <li><Link to="/login">Sign In</Link></li>
               <li><Link to="/signup">Create Account</Link></li>
-              <li><a href="#how-it-works">How AI Works</a></li>
-              <li><a href="#privacy">Privacy & Security</a></li>
+              <li><a href="#how-it-works">How Matching Works</a></li>
+              <li><a href="#privacy">Privacy Principles</a></li>
             </ul>
           </div>
 
-          {/* Technology & Status */}
+          {/* Platform Standards */}
           <div className="footer-col">
-            <h4>Technology</h4>
+            <h4>Platform Commitments</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <Cpu size={16} color="#6366f1" />
-                <span>Multimodal Embeddings</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+                <Lock size={15} color="var(--primary)" />
+                <span>Restricted Proof Verification</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                <Shield size={16} color="#10b981" />
-                <span>Supabase Protected</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+                <CheckCircle2 size={15} color="var(--found-accent)" />
+                <span>Dual-Confirmation Handover</span>
               </div>
-              <div className="badge badge-primary" style={{ alignSelf: 'flex-start', marginTop: '0.5rem' }}>
-                System Ready • v1.0
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+                <Cpu size={15} color="var(--accent-teal)" />
+                <span>Open-Source Embeddings</span>
               </div>
             </div>
           </div>
@@ -63,9 +64,9 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} FindAI - AI Lost-and-Found Matcher. All rights reserved.</p>
-          <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            Built with precision & Care
+          <p>© {new Date().getFullYear()} FindAI. Transparent Community Lost & Found System.</p>
+          <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)' }}>
+            All private user data protected under Row Level Security.
           </p>
         </div>
       </div>

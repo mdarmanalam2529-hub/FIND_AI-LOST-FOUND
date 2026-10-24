@@ -18,6 +18,7 @@ import {
   X,
   ShieldCheck
 } from 'lucide-react';
+import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ReportFound() {
   const { user, loading: authLoading } = useAuth();
@@ -178,8 +179,10 @@ export default function ReportFound() {
   };
 
   return (
-    <div className="container" style={{ padding: '3.5rem 1.5rem 5rem' }} id="report-found-page">
-      <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
+      <HeroAnimatedBackground variant="minimal" />
+      <div className="container" style={{ position: 'relative', zIndex: 1, padding: '3.5rem 1.5rem 5rem' }} id="report-found-page">
+        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -198,17 +201,17 @@ export default function ReportFound() {
             className="glass-card" 
             style={{ 
               marginBottom: '2rem', 
-              borderColor: 'rgba(16, 185, 129, 0.3)', 
-              background: 'rgba(16, 185, 129, 0.08)',
+              borderColor: 'var(--found-border)', 
+              background: 'var(--found-subtle)',
               textAlign: 'center',
               padding: '2rem'
             }}
           >
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-              <LogIn size={22} color="#34d399" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(5, 150, 105, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+              <LogIn size={22} color="var(--found-accent)" />
             </div>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Authentication Required</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>Authentication Required</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
               Please sign in so you can manage your reported found items and verify ownership handoffs safely.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
@@ -225,8 +228,8 @@ export default function ReportFound() {
         {/* Success View */}
         {createdItem ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <CheckCircle2 size={32} color="#10b981" />
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--found-subtle)', border: '1px solid var(--found-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+              <CheckCircle2 size={32} color="var(--found-accent)" />
             </div>
             <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>Found Item Recorded!</h3>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '460px', margin: '0 auto 1.5rem' }}>
@@ -260,15 +263,15 @@ export default function ReportFound() {
             {serverError && (
               <div 
                 style={{ 
-                  background: 'rgba(244, 63, 94, 0.15)', 
-                  border: '1px solid rgba(244, 63, 94, 0.3)', 
+                  background: 'var(--lost-subtle)', 
+                  border: '1px solid var(--lost-border)', 
                   borderRadius: 'var(--radius-md)', 
                   padding: '0.85rem 1rem', 
                   marginBottom: '1.5rem',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.6rem',
-                  color: '#fb7185',
+                  color: 'var(--lost-accent)',
                   fontSize: '0.88rem'
                 }}
                 id="found-server-error"
@@ -416,7 +419,7 @@ export default function ReportFound() {
                       borderRadius: 'var(--radius-md)', 
                       overflow: 'hidden', 
                       border: '1px solid var(--border-subtle)',
-                      background: 'rgba(0, 0, 0, 0.3)',
+                      background: 'var(--bg-subtle)',
                       padding: '0.5rem'
                     }}
                   >
@@ -459,7 +462,7 @@ export default function ReportFound() {
                       borderRadius: 'var(--radius-md)', 
                       padding: '2rem 1rem', 
                       textAlign: 'center', 
-                      background: 'rgba(0, 0, 0, 0.2)', 
+                      background: 'var(--bg-subtle)', 
                       cursor: submitting || !user ? 'not-allowed' : 'pointer',
                       transition: 'border-color 0.2s'
                     }}
@@ -489,6 +492,14 @@ export default function ReportFound() {
                 )}
               </div>
 
+              {/* Finder Protection Notice */}
+              <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1rem', marginBottom: '1.25rem', display: 'flex', gap: '0.65rem', alignItems: 'flex-start', fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <ShieldCheck size={18} color="#059669" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong style={{ color: 'var(--text-main)' }}>Finder Protection:</strong> Thank you for your honesty. For your security, do not disclose secret passcodes, serial numbers, or internal contents publicly. Claimants must supply verifiable private proof before you approve a return.
+                </div>
+              </div>
+
               {/* Submit Button */}
               <button 
                 type="submit" 
@@ -513,5 +524,6 @@ export default function ReportFound() {
 
       </div>
     </div>
+  </div>
   );
 }

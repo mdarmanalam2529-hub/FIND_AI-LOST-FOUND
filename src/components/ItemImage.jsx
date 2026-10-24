@@ -49,20 +49,20 @@ export default function ItemImage({ imagePath, alt = 'Item photo', className = '
         style={{ 
           width: '100%', 
           height: '140px', 
-          background: 'rgba(255, 255, 255, 0.03)', 
+          background: 'var(--bg-subtle)', 
           borderBottom: '1px solid var(--border-subtle)', 
           display: 'flex', 
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
           gap: '0.4rem',
-          color: 'var(--text-dim)',
+          color: 'var(--text-muted)',
           ...style
         }}
         className={className}
       >
-        <ImageIcon size={24} />
-        <span style={{ fontSize: '0.75rem' }}>No photo attached</span>
+        <ImageIcon size={22} color="var(--text-dim)" />
+        <span style={{ fontSize: '0.78rem', fontWeight: 500 }}>No photograph provided</span>
       </div>
     );
   }
@@ -73,11 +73,12 @@ export default function ItemImage({ imagePath, alt = 'Item photo', className = '
         style={{ 
           width: '100%', 
           height: '140px', 
-          background: 'rgba(0, 0, 0, 0.2)', 
+          background: 'var(--bg-subtle)', 
+          borderBottom: '1px solid var(--border-subtle)',
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: 'var(--text-dim)',
+          color: 'var(--primary)',
           ...style
         }}
         className={className}
@@ -94,7 +95,8 @@ export default function ItemImage({ imagePath, alt = 'Item photo', className = '
         height: '160px', 
         overflow: 'hidden', 
         position: 'relative', 
-        background: '#090d16',
+        background: 'var(--bg-subtle)',
+        borderBottom: '1px solid var(--border-subtle)',
         cursor: onClick ? 'pointer' : 'default',
         ...style 
       }}
@@ -109,7 +111,7 @@ export default function ItemImage({ imagePath, alt = 'Item photo', className = '
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          transition: 'transform 0.3s ease',
+          transition: 'transform 0.25s ease',
         }}
         onError={() => setFailed(true)}
       />

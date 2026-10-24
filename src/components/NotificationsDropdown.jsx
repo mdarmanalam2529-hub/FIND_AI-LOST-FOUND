@@ -57,7 +57,7 @@ export default function NotificationsDropdown() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          background: 'rgba(255, 255, 255, 0.05)',
+          background: 'var(--bg-subtle)',
           border: '1px solid var(--border-subtle)',
           borderRadius: '50%',
           width: '38px',
@@ -65,7 +65,7 @@ export default function NotificationsDropdown() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: unreadCount > 0 ? 'var(--primary-light)' : 'var(--text-muted)',
+          color: unreadCount > 0 ? 'var(--primary)' : 'var(--text-muted)',
           cursor: 'pointer',
           position: 'relative',
         }}
@@ -79,7 +79,7 @@ export default function NotificationsDropdown() {
               position: 'absolute',
               top: '-3px',
               right: '-3px',
-              background: '#f43f5e',
+              background: 'var(--lost-accent)',
               color: '#fff',
               fontSize: '0.7rem',
               fontWeight: 700,
@@ -89,7 +89,7 @@ export default function NotificationsDropdown() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '2px solid #090d16',
+              border: '2px solid var(--bg-surface)',
             }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -108,22 +108,23 @@ export default function NotificationsDropdown() {
             maxWidth: '90vw',
             padding: '1rem',
             zIndex: 160,
-            boxShadow: 'var(--shadow-glow)',
+            boxShadow: 'var(--shadow-lg)',
             maxHeight: '400px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.65rem',
+            background: 'var(--bg-surface)',
           }}
           id="notifications-panel"
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>Activity Notifications</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{unreadCount} unread</span>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)' }}>Activity Notifications</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{unreadCount} unread</span>
           </div>
 
           {notifications.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '1.5rem 0.5rem', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+            <div style={{ textAlign: 'center', padding: '1.5rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               No notifications yet. You will be alerted when claims or handovers update.
             </div>
           ) : (
@@ -132,8 +133,8 @@ export default function NotificationsDropdown() {
                 key={n.id}
                 onClick={() => handleMarkRead(n)}
                 style={{
-                  background: n.read_at ? 'rgba(255, 255, 255, 0.02)' : 'rgba(99, 102, 241, 0.08)',
-                  border: n.read_at ? '1px solid var(--border-subtle)' : '1px solid rgba(99, 102, 241, 0.3)',
+                  background: n.read_at ? 'var(--bg-subtle)' : 'var(--primary-subtle)',
+                  border: n.read_at ? '1px solid var(--border-subtle)' : '1px solid var(--primary-border)',
                   borderRadius: 'var(--radius-sm)',
                   padding: '0.65rem 0.75rem',
                   fontSize: '0.82rem',
@@ -144,10 +145,10 @@ export default function NotificationsDropdown() {
                 }}
               >
                 {!n.read_at && (
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary-light)', marginTop: '5px', flexShrink: 0 }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', marginTop: '5px', flexShrink: 0 }} />
                 )}
                 <div style={{ flex: 1 }}>
-                  <p style={{ color: n.read_at ? 'var(--text-muted)' : '#fff', lineHeight: 1.4, marginBottom: '0.2rem' }}>
+                  <p style={{ color: n.read_at ? 'var(--text-secondary)' : 'var(--text-main)', fontWeight: n.read_at ? 400 : 600, lineHeight: 1.4, marginBottom: '0.2rem' }}>
                     {n.message}
                   </p>
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>

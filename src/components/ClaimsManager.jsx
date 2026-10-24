@@ -4,30 +4,22 @@ import {
   ShieldCheck, 
   Clock, 
   CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
   MapPin, 
   Calendar, 
   Lock, 
-  FileText, 
-  Send, 
   Loader2, 
   RefreshCw, 
   ShieldAlert, 
   UserCheck, 
-  ArrowRight,
   Handshake,
   Check,
   Search,
-  Filter,
   History,
   PauseCircle,
   PlayCircle,
   ChevronDown,
   ChevronUp,
-  Info,
-  ExternalLink,
-  Tag
+  Info
 } from 'lucide-react';
 
 export default function ClaimsManager() {
@@ -35,7 +27,7 @@ export default function ClaimsManager() {
   const [claimsData, setClaimsData] = useState({ outgoing: [], incoming: [], adminQueue: [], allClaims: [], isAdmin: false });
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [error, setError] = useState(null);
+  const [_error, setError] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
 
   // Handover coordination state
@@ -128,7 +120,7 @@ export default function ClaimsManager() {
 
     setActionLoadingId(handoverId);
     try {
-      const res = await claimsService.coordinateHandover(handoverId, {
+      const _res = await claimsService.coordinateHandover(handoverId, {
         proposedLocation: handoverLocation.trim(),
         scheduledAt: handoverTime || null,
         notes: handoverNotes.trim() || null,
@@ -167,44 +159,44 @@ export default function ClaimsManager() {
     const handover = claim.handover;
 
     if (claim.status === 'completed') {
-      return { label: 'Completed', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.35)' };
+      return { label: 'Completed & Returned', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' };
     }
     if (claim.status === 'disputed') {
-      return { label: 'Disputed', color: '#fb7185', bg: 'rgba(244, 63, 94, 0.15)', border: 'rgba(244, 63, 94, 0.35)' };
+      return { label: 'Disputed', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' };
     }
     if (claim.status === 'rejected') {
-      return { label: 'Rejected', color: '#fb7185', bg: 'rgba(244, 63, 94, 0.15)', border: 'rgba(244, 63, 94, 0.35)' };
+      return { label: 'Rejected', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' };
     }
     if (claim.status === 'cancelled') {
-      return { label: 'Cancelled', color: 'var(--text-dim)', bg: 'rgba(255, 255, 255, 0.08)', border: 'transparent' };
+      return { label: 'Cancelled', color: 'var(--text-muted)', bg: 'var(--bg-subtle)', border: 'var(--border-subtle)' };
     }
     if (claim.status === 'under_review') {
-      return { label: 'On Hold (Admin Review)', color: '#facc15', bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.35)' };
+      return { label: 'On Hold (Admin Review)', color: '#b45309', bg: '#fffbeb', border: '#fde68a' };
     }
     if (claim.status === 'approved') {
       if (handover?.status === 'suspended') {
-        return { label: 'Handover Suspended', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)', border: 'rgba(244, 63, 94, 0.35)' };
+        return { label: 'Handover Suspended', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' };
       }
       if (handover?.status === 'handover_pending') {
-        return { label: 'Awaiting Confirmation', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)', border: 'rgba(167, 139, 250, 0.35)' };
+        return { label: 'Awaiting Dual Confirmation', color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' };
       }
       if (handover?.status === 'scheduled' || handover?.scheduled_at) {
-        return { label: 'Return Arranged', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.15)', border: 'rgba(96, 165, 250, 0.35)' };
+        return { label: 'Return Arranged', color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' };
       }
-      return { label: 'Approved', color: '#34d399', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)' };
+      return { label: 'Approved (Pending Plan)', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' };
     }
-    return { label: 'Pending', color: 'var(--primary-light)', bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.35)' };
+    return { label: 'Pending Finder Review', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
   };
 
   const getRiskBadge = (claim) => {
     const risk = claim.private_proof?.riskLevel || (claim.requires_admin_review ? 'high' : 'low');
     if (risk === 'high' || claim.status === 'disputed') {
-      return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', border: '1px solid rgba(244, 63, 94, 0.3)' }}>HIGH RISK / HELD</span>;
+      return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fca5a5' }}>HIGH RISK / HELD</span>;
     }
     if (risk === 'elevated') {
-      return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>SENSITIVE (DIRECT RETURN)</span>;
+      return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>SENSITIVE (DIRECT RETURN)</span>;
     }
-    return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>LOW RISK</span>;
+    return <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>LOW RISK</span>;
   };
 
   // Filtered dataset for Admin Monitoring Dashboard
@@ -282,23 +274,26 @@ export default function ClaimsManager() {
       )}
 
       {/* Sub Tabs Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.65rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setSubTab('incoming')}
             style={{
-              background: subTab === 'incoming' ? 'var(--primary-gradient)' : 'rgba(255, 255, 255, 0.04)',
-              color: subTab === 'incoming' ? '#fff' : 'var(--text-muted)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.45rem 0.95rem',
+              background: subTab === 'incoming' ? 'var(--primary)' : 'var(--bg-surface)',
+              color: subTab === 'incoming' ? '#ffffff' : 'var(--text-secondary)',
+              border: '1px solid',
+              borderColor: subTab === 'incoming' ? 'var(--primary)' : 'var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.5rem 1rem',
               fontSize: '0.88rem',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.45rem',
+              boxShadow: subTab === 'incoming' ? 'var(--shadow-sm)' : 'none',
+              transition: 'all 0.15s ease',
             }}
             id="tab-sub-incoming"
           >
@@ -309,17 +304,20 @@ export default function ClaimsManager() {
             type="button"
             onClick={() => setSubTab('outgoing')}
             style={{
-              background: subTab === 'outgoing' ? 'var(--primary-gradient)' : 'rgba(255, 255, 255, 0.04)',
-              color: subTab === 'outgoing' ? '#fff' : 'var(--text-muted)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.45rem 0.95rem',
+              background: subTab === 'outgoing' ? 'var(--primary)' : 'var(--bg-surface)',
+              color: subTab === 'outgoing' ? '#ffffff' : 'var(--text-secondary)',
+              border: '1px solid',
+              borderColor: subTab === 'outgoing' ? 'var(--primary)' : 'var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.5rem 1rem',
               fontSize: '0.88rem',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.45rem',
+              boxShadow: subTab === 'outgoing' ? 'var(--shadow-sm)' : 'none',
+              transition: 'all 0.15s ease',
             }}
             id="tab-sub-outgoing"
           >
@@ -331,21 +329,24 @@ export default function ClaimsManager() {
               type="button"
               onClick={() => setSubTab('admin')}
               style={{
-                background: subTab === 'admin' ? '#f59e0b' : 'rgba(245, 158, 11, 0.1)',
-                color: subTab === 'admin' ? '#000' : '#f59e0b',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '0.45rem 0.95rem',
+                background: subTab === 'admin' ? '#d97706' : '#fffbeb',
+                color: subTab === 'admin' ? '#ffffff' : '#b45309',
+                border: '1px solid',
+                borderColor: subTab === 'admin' ? '#d97706' : '#fde68a',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.5rem 1rem',
                 fontSize: '0.88rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.45rem',
+                boxShadow: subTab === 'admin' ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.15s ease',
               }}
               id="tab-sub-admin"
             >
-              <ShieldAlert size={15} /> Admin Monitoring & Control ({claimsData.allClaims?.length || claimsData.adminQueue?.length || 0})
+              <ShieldAlert size={15} /> Admin Moderation & Audit ({claimsData.allClaims?.length || claimsData.adminQueue?.length || 0})
             </button>
           )}
         </div>
@@ -354,7 +355,7 @@ export default function ClaimsManager() {
           type="button"
           onClick={loadClaims}
           disabled={loading}
-          style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.85rem' }}
+          style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.4rem 0.75rem', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 500 }}
         >
           <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
         </button>
@@ -366,24 +367,24 @@ export default function ClaimsManager() {
           {/* Admin Metrics Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
             <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid var(--primary)' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>Total Platform Claims</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff' }}>{adminMetrics.total}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Total Platform Claims</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>{adminMetrics.total}</div>
             </div>
-            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #34d399' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>Direct Returns / Active</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#34d399' }}>{adminMetrics.directReturns}</div>
+            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #059669' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Direct Returns / Active</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#059669' }}>{adminMetrics.directReturns}</div>
             </div>
-            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #facc15' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>On Administrative Hold</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#facc15' }}>{adminMetrics.onHold}</div>
+            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #d97706' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>On Administrative Hold</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#d97706' }}>{adminMetrics.onHold}</div>
             </div>
-            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #fb7185' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>Disputes / Flagged</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fb7185' }}>{adminMetrics.disputed}</div>
+            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #dc2626' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Disputes / Flagged</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#dc2626' }}>{adminMetrics.disputed}</div>
             </div>
-            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #38bdf8' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.2rem' }}>Completed Returns</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#38bdf8' }}>{adminMetrics.completed}</div>
+            <div className="glass-card" style={{ padding: '1rem', borderLeft: '4px solid #0284c7' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Completed Returns</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0284c7' }}>{adminMetrics.completed}</div>
             </div>
           </div>
 
@@ -521,7 +522,7 @@ export default function ClaimsManager() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
-                      <h4 style={{ fontSize: '1.15rem', color: '#fff', margin: 0 }}>
+                      <h4 style={{ fontSize: '1.15rem', color: 'var(--text-main)', margin: 0 }}>
                         {subTab === 'outgoing' 
                           ? `Claim for: ${claim.found_item?.title || 'Found Item'}` 
                           : `Claim on: ${claim.found_item?.title || 'Found Report'}`}
@@ -557,14 +558,14 @@ export default function ClaimsManager() {
                   </div>
 
                   {/* Linked Lost Report */}
-                  <div style={{ fontSize: '0.82rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.35rem 0.65rem', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
-                    <span>Linked Lost Report: </span>
-                    <strong style={{ color: '#fff' }}>{claim.lost_item?.title || 'Lost Item'}</strong>
+                  <div style={{ fontSize: '0.82rem', background: 'var(--bg-subtle)', padding: '0.35rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Linked Report: </span>
+                    <strong style={{ color: 'var(--text-main)' }}>{claim.lost_item?.title || 'Lost Item'}</strong>
                   </div>
                 </div>
 
                 {/* Explanation Message */}
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
+                <div style={{ background: 'var(--bg-subtle)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '0.88rem' }}>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.25rem', fontWeight: 600 }}>Claimant Explanation:</div>
                   <p style={{ color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                     {claim.claim_message}
@@ -612,18 +613,23 @@ export default function ClaimsManager() {
                 {/* HANDOVER COORDINATION SECTION */}
                 {isApproved && handover && (
                   <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '0.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#38bdf8', fontWeight: 600, fontSize: '0.95rem' }}>
-                        <Handshake size={16} /> In-App Return Handover Coordination
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.95rem' }}>
+                        <Handshake size={16} color="var(--primary)" /> Return Handover Coordination
                       </div>
-                      <span className="badge" style={{ background: isCompleted ? 'rgba(56, 189, 248, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: isCompleted ? '#38bdf8' : 'var(--primary-light)' }}>
+                      <span className="badge" style={{ background: isCompleted ? '#f0f9ff' : '#eff6ff', color: isCompleted ? '#0284c7' : 'var(--primary)', border: '1px solid', borderColor: isCompleted ? '#bae6fd' : '#bfdbfe' }}>
                         Handover: {handover.status.toUpperCase()}
                       </span>
                     </div>
 
+                    <div style={{ background: '#f8fafc', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.55rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.79rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.45rem', lineHeight: 1.4 }}>
+                      <ShieldCheck size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                      <span><strong>Safe Handover Protocol:</strong> Meet exclusively at well-lit public desks (campus security, building reception, or library service desk). Confirm physical item condition together before marking returned.</span>
+                    </div>
+
                     {coordinatingHandoverId === handover.id ? (
                       /* Coordinate Form */
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(0, 0, 0, 0.25)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                         <div>
                           <label className="form-label" style={{ fontSize: '0.8rem' }}>Proposed Public Meeting Location *</label>
                           <input 
@@ -670,12 +676,12 @@ export default function ClaimsManager() {
                         <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <MapPin size={14} color="#f43f5e" />
-                            <span>Location: <strong style={{ color: '#fff' }}>{handover.proposed_location}</strong></span>
+                            <span>Location: <strong style={{ color: 'var(--text-main)' }}>{handover.proposed_location}</strong></span>
                           </div>
                           {handover.scheduled_at && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                               <Calendar size={14} color="var(--primary-light)" />
-                              <span>Time: <strong style={{ color: '#fff' }}>{new Date(handover.scheduled_at).toLocaleString()}</strong></span>
+                              <span>Time: <strong style={{ color: 'var(--text-main)' }}>{new Date(handover.scheduled_at).toLocaleString()}</strong></span>
                             </div>
                           )}
                           {handover.notes && (
@@ -693,7 +699,7 @@ export default function ClaimsManager() {
                                 setHandoverNotes(handover.notes || '');
                                 setCoordinatingHandoverId(handover.id);
                               }}
-                              style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline' }}
+                              style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.82rem', textDecoration: 'underline', fontWeight: 500 }}
                             >
                               Arrange / Edit Return Details
                             </button>
@@ -702,11 +708,11 @@ export default function ClaimsManager() {
 
                         {/* Dual Confirmation Status Pills */}
                         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                          <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: '4px', background: handover.finder_confirmed_at ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: handover.finder_confirmed_at ? '#34d399' : 'var(--text-dim)', border: '1px solid currentColor', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: '4px', background: handover.finder_confirmed_at ? '#ecfdf5' : 'var(--bg-subtle)', color: handover.finder_confirmed_at ? '#047857' : 'var(--text-muted)', border: '1px solid', borderColor: handover.finder_confirmed_at ? '#a7f3d0' : 'var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             {handover.finder_confirmed_at ? <Check size={12} /> : <Clock size={12} />}
                             Finder Handed Over: {handover.finder_confirmed_at ? 'Confirmed' : 'Pending'}
                           </span>
-                          <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: '4px', background: handover.claimant_confirmed_at ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: handover.claimant_confirmed_at ? '#34d399' : 'var(--text-dim)', border: '1px solid currentColor', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: '4px', background: handover.claimant_confirmed_at ? '#ecfdf5' : 'var(--bg-subtle)', color: handover.claimant_confirmed_at ? '#047857' : 'var(--text-muted)', border: '1px solid', borderColor: handover.claimant_confirmed_at ? '#a7f3d0' : 'var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                             {handover.claimant_confirmed_at ? <Check size={12} /> : <Clock size={12} />}
                             Claimant Received: {handover.claimant_confirmed_at ? 'Confirmed' : 'Pending'}
                           </span>
@@ -758,7 +764,7 @@ export default function ClaimsManager() {
                   </button>
 
                   {isTimelineOpen && (
-                    <div style={{ marginTop: '0.75rem', background: 'rgba(0, 0, 0, 0.2)', borderRadius: 'var(--radius-sm)', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <div style={{ marginTop: '0.75rem', background: 'var(--bg-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', border: '1px solid var(--border-subtle)' }}>
                       <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                         Chronological Claim & Handover Audit Trail:
                       </div>
@@ -782,7 +788,7 @@ export default function ClaimsManager() {
                               {entry.actorRole}
                             </span>
                             <div style={{ flex: 1 }}>
-                              <strong style={{ color: '#fff' }}>{entry.action.replace(/_/g, ' ')}</strong>
+                              <strong style={{ color: 'var(--text-main)' }}>{entry.action.replace(/_/g, ' ')}</strong>
                               {entry.reason && <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Note: {entry.reason}</div>}
                             </div>
                           </div>

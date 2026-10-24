@@ -26,18 +26,7 @@
   animation: subtlePulse 6s ease-in-out infinite;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
+/* @keyframes spin and .spin are defined globally in index.css — do not duplicate here */
 
 /* 404 Not Found Page */
 .not-found-wrapper {

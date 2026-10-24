@@ -6,7 +6,13 @@ import React, { useEffect, useRef, useState } from 'react';
  * Zero heavy 3D engine overhead, 60fps GPU-accelerated rendering,
  * responsive to cursor tilt, and respects prefers-reduced-motion.
  */
-export default function AiOrb3D({ size = 420, className = '' }) {
+export default function AiOrb3D({
+  size = 420,
+  className = '',
+  showBadge = true,
+  interactive = true,
+  style = {},
+}) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const animFrameId = useRef(null);
@@ -159,10 +165,10 @@ export default function AiOrb3D({ size = 420, className = '' }) {
         centerY,
         sphereRadius * 1.15 * dpr * corePulse
       );
-      coreGrad.addColorStop(0, 'rgba(6, 182, 212, 0.45)'); // Bright Cyan
-      coreGrad.addColorStop(0.35, 'rgba(99, 102, 241, 0.3)'); // Electric Indigo
-      coreGrad.addColorStop(0.7, 'rgba(79, 70, 229, 0.1)');
-      coreGrad.addColorStop(1, 'rgba(9, 13, 22, 0)');
+      coreGrad.addColorStop(0, 'rgba(34, 211, 238, 0.45)'); // Luminous Cyan #22D3EE
+      coreGrad.addColorStop(0.35, 'rgba(37, 99, 235, 0.28)'); // Primary Blue #2563EB
+      coreGrad.addColorStop(0.7, 'rgba(99, 102, 241, 0.12)'); // Soft Indigo
+      coreGrad.addColorStop(1, 'rgba(240, 247, 255, 0)');
 
       ctx.fillStyle = coreGrad;
       ctx.beginPath();
@@ -362,7 +368,7 @@ export default function AiOrb3D({ size = 420, className = '' }) {
 
   // Handle interactive mouse tilt
   const handleMouseMove = (e) => {
-    if (reducedMotion) return;
+    if (!interactive || reducedMotion) return;
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -373,6 +379,7 @@ export default function AiOrb3D({ size = 420, className = '' }) {
   };
 
   const handleMouseLeave = () => {
+    if (!interactive) return;
     mouseRef.current.targetX = 0;
     mouseRef.current.targetY = 0;
   };
@@ -393,6 +400,7 @@ export default function AiOrb3D({ size = 420, className = '' }) {
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',
+        ...style,
       }}
       aria-label="3D AI Holographic Neural Engine Orb"
       role="img"
@@ -403,7 +411,7 @@ export default function AiOrb3D({ size = 420, className = '' }) {
           position: 'absolute',
           inset: '12%',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.22) 0%, rgba(99, 102, 241, 0.12) 45%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, rgba(37, 99, 235, 0.12) 45%, transparent 70%)',
           filter: 'blur(32px)',
           pointerEvents: 'none',
           zIndex: 0,
@@ -419,54 +427,56 @@ export default function AiOrb3D({ size = 420, className = '' }) {
           zIndex: 1,
           maxWidth: '100%',
           height: 'auto',
-          filter: 'drop-shadow(0 0 25px rgba(6, 182, 212, 0.35))',
+          filter: 'drop-shadow(0 0 25px rgba(34, 211, 238, 0.35))',
         }}
       />
 
-      {/* Holographic Center Lens Ring Badge */}
-      <div
-        className="holographic-center-badge"
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 2,
-          pointerEvents: 'none',
-          padding: '0.35rem 0.75rem',
-          borderRadius: '9999px',
-          background: 'rgba(9, 13, 22, 0.75)',
-          border: '1px solid rgba(6, 182, 212, 0.4)',
-          backdropFilter: 'blur(8px)',
-          boxShadow: '0 0 15px rgba(6, 182, 212, 0.3), inset 0 0 8px rgba(99, 102, 241, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-        }}
-      >
-        <span
+      {/* Holographic Center Lens Ring Badge - Frosted White with Cyan Accent */}
+      {showBadge && (
+        <div
+          className="holographic-center-badge"
           style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            background: '#06b6d4',
-            boxShadow: '0 0 8px #06b6d4',
-            display: 'inline-block',
-          }}
-        />
-        <span
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: '#e0f2fe',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 2,
+            pointerEvents: 'none',
+            padding: '0.35rem 0.75rem',
+            borderRadius: '9999px',
+            background: 'rgba(255, 255, 255, 0.94)',
+            border: '1px solid #BFDBFE',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 2px 10px rgba(37, 99, 235, 0.12), 0 0 14px rgba(34, 211, 238, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
           }}
         >
-          Neural Core Active
-        </span>
-      </div>
+          <span
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: '#22d3ee',
+              boxShadow: '0 0 8px #22d3ee',
+              display: 'inline-block',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: '#0F172A',
+            }}
+          >
+            Neural Core Active
+          </span>
+        </div>
+      )}
     </div>
   );
 }

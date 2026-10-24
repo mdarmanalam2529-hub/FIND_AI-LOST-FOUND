@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function Login() {
   const { signIn, user, loading: authLoading } = useAuth();
@@ -97,8 +98,10 @@ export default function Login() {
   };
 
   return (
-    <div className="container" style={{ padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
+      <HeroAnimatedBackground variant="ambient" />
+      <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
+        <div className="glass-card form-entrance" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -115,13 +118,14 @@ export default function Login() {
         {redirectMessage && (
           <div 
             style={{ 
-              background: 'rgba(234, 179, 8, 0.12)', 
-              border: '1px solid rgba(234, 179, 8, 0.3)', 
+              background: 'var(--warning-subtle)', 
+              border: '1px solid var(--warning-border)', 
               borderRadius: 'var(--radius-md)', 
               padding: '0.75rem 1rem', 
               marginBottom: '1.25rem',
-              color: '#fef08a',
-              fontSize: '0.85rem'
+              color: 'var(--warning-accent)',
+              fontSize: '0.86rem',
+              fontWeight: 500,
             }}
           >
             {redirectMessage}
@@ -132,15 +136,15 @@ export default function Login() {
         {serverError && (
           <div 
             style={{ 
-              background: 'rgba(244, 63, 94, 0.15)', 
-              border: '1px solid rgba(244, 63, 94, 0.3)', 
+              background: 'var(--lost-subtle)', 
+              border: '1px solid var(--lost-border)', 
               borderRadius: 'var(--radius-md)', 
               padding: '0.85rem 1rem', 
               marginBottom: '1.25rem',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '0.6rem',
-              color: '#fb7185',
+              color: 'var(--lost-accent)',
               fontSize: '0.88rem'
             }}
             id="login-server-error"
@@ -172,7 +176,7 @@ export default function Login() {
               />
               <Mail 
                 size={18} 
-                color="var(--text-dim)" 
+                color="var(--text-muted)" 
                 style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} 
               />
             </div>
@@ -191,7 +195,7 @@ export default function Login() {
               </label>
               <Link 
                 to="/forgot-password" 
-                style={{ fontSize: '0.8rem', color: 'var(--primary-light)' }} 
+                style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 500 }} 
                 id="login-forgot-password"
               >
                 Forgot password?
@@ -265,12 +269,13 @@ export default function Login() {
         {/* Footer switch to SignUp */}
         <div style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
           Don't have an account yet?{' '}
-          <Link to="/signup" style={{ color: 'var(--primary-light)', fontWeight: 600 }} id="login-switch-signup">
+          <Link to="/signup" style={{ color: 'var(--primary)', fontWeight: 600 }} id="login-switch-signup">
             Create account
           </Link>
         </div>
 
       </div>
     </div>
+  </div>
   );
 }
