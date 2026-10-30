@@ -100,7 +100,7 @@ export const claimsService = {
   },
 
   /**
-   * Confirm handover (Finder confirms handed over or Claimant confirms received)
+   * Confirm handover (Finder confirms handed over, Claimant confirms received)
    */
   async confirmHandover(handoverId, confirmationType) {
     const headers = await getAuthHeader();
@@ -148,5 +148,56 @@ export const claimsService = {
     });
 
     return response.ok;
+  },
+
+  /**
+   * Fetch suspicious handover incidents for administrator review
+   */
+  async fetchIncidents({ status = 'all', severity = 'all', incidentType = 'all', search = '' } = {}) {
+    const headers = await getAuthHeader();
+    const params = new URLSearchParams();
+    if (status !== 'all') params.append('status', status);
+    if (severity !== 'all') params.append('severity', severity);
+    if (incidentType !== 'all') params.append('incidentType', incidentType);
+    if (search) params.append('search', search);
+
+    const url = `/api/admin/incidents${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await fetch(url, { method: 'GET', headers });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || `Failed to fetch incidents (HTTP ${response.status})`);
+    }
+    return data; // { incidents, count }
+  },
+
+  /**
+   * Fetch incident summary statistics
+   */
+  async fetchIncidentStats() {
+    const headers = await getAuthHeader();
+    const response = await fetch('/api/admin/incidents/stats', { method: 'GET', headers });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || `Failed to fetch incident stats (HTTP ${response.status})`);
+    }
+    return data.stats;
+  },
+
+  /**
+   * Submit an administrative review decision on an incident
+   */
+  async reviewIncident(incidentId, { status, decisionNotes, releaseHold = false }) {
+    const headers = await getAuthHeader();
+    const response = await fetch(`/api/admin/incidents/${incidentId}/review`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status, decisionNotes, releaseHold }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || `Failed to review incident (HTTP ${response.status})`);
+    }
+    return data;
   },
 };

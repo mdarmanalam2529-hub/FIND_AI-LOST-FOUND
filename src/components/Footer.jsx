@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Cpu, Lock, CheckCircle2 } from 'lucide-react';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export default function Footer() {
   return (
     <footer className="footer" id="main-footer">
@@ -64,7 +66,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} FindAI. Transparent Community Lost & Found System.</p>
+          <p>© {CURRENT_YEAR} FindAI. Transparent Community Lost & Found System.</p>
           <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)' }}>
             All private user data protected under Row Level Security.
           </p>

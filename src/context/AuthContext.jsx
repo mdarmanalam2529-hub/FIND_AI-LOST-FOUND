@@ -8,9 +8,11 @@ const AuthContext = createContext({
   isConfigured: false,
   signUp: async () => {},
   signIn: async () => {},
+  signInWithRegistrationNumber: async () => {},
   signOut: async () => {},
   resetPassword: async () => {},
   updatePassword: async () => {},
+  changePassword: async () => {},
 });
 
 export function AuthProvider({ children }) {
@@ -100,6 +102,52 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // University registration number + password sign in
+  const signInWithRegistrationNumber = async (registrationNumber, password) => {
+    if (!registrationNumber || !registrationNumber.trim()) {
+      throw new Error('University registration number is required.');
+    }
+    if (!password) {
+      throw new Error('Password is required.');
+    }
+
+    const response = await fetch('/api/auth/student-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        registrationNumber: registrationNumber.trim(),
+        password,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Login failed. Please verify your credentials.');
+    }
+
+    if (!data.session?.access_token || !data.session?.refresh_token) {
+      throw new Error('Authentication failed: Missing session tokens in response.');
+    }
+
+    if (!supabase) {
+      throw new Error('Supabase client is not available to establish session.');
+    }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    return sessionData;
+  };
+
   // Sign out / logout
   const signOut = async () => {
     if (!supabase) return;
@@ -139,6 +187,42 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // Change password for authenticated user with current password verification
+  const changePassword = async ({ currentPassword, newPassword, confirmPassword }) => {
+    if (!session?.access_token) {
+      throw new Error('You must be signed in to change your password.');
+    }
+
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to change password.');
+    }
+
+    // Refresh user state if metadata changed
+    if (supabase) {
+      const { data: refreshedUser } = await supabase.auth.getUser();
+      if (refreshedUser?.user) {
+        setUser(refreshedUser.user);
+      }
+    }
+
+    return data;
+  };
+
   const value = {
     user,
     session,
@@ -146,9 +230,11 @@ export function AuthProvider({ children }) {
     isConfigured: isSupabaseConfigured,
     signUp,
     signIn,
+    signInWithRegistrationNumber,
     signOut,
     resetPassword,
     updatePassword,
+    changePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

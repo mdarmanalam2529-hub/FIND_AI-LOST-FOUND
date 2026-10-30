@@ -79,7 +79,7 @@ export default function ClaimModal({ foundItem, preselectedLostItem = null, user
       id="claim-modal"
     >
       <div 
-        className="glass-card" 
+        className="glass-card modal-content-card" 
         style={{
           width: '100%',
           maxWidth: '560px',

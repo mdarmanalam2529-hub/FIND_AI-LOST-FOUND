@@ -1,28 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { UserPlus, User, AlertCircle, CheckCircle2, Loader2, ArrowRight, GraduationCap } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function SignUp() {
-  const { signUp, user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
+    registrationNumber: '',
     fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
     agreeTerms: false,
   });
 
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
-  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   // Auto-redirect if already authenticated
   useEffect(() => {
@@ -34,28 +29,16 @@ export default function SignUp() {
   const validate = () => {
     const newErrors = {};
 
+    if (!formData.registrationNumber.trim()) {
+      newErrors.registrationNumber = 'University registration number is required.';
+    } else if (formData.registrationNumber.trim().length < 3) {
+      newErrors.registrationNumber = 'Please enter at least 3 characters.';
+    }
+
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required.';
     } else if (formData.fullName.trim().length < 2) {
       newErrors.fullName = 'Please enter at least 2 characters.';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email address is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = 'Please enter a valid email address.';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required.';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters.';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password.';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match.';
     }
 
     if (!formData.agreeTerms) {
@@ -93,29 +76,28 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const data = await signUp({
-        email: formData.email.trim(),
-        password: formData.password,
-        fullName: formData.fullName.trim(),
+      // Secure server-side student registration with registry verification
+      const response = await fetch('/api/auth/register-student', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registrationNumber: formData.registrationNumber.trim(),
+          fullName: formData.fullName.trim(),
+        }),
       });
 
-      // Check whether Supabase requires email verification (session is null if email confirmation is enabled)
-      if (data?.user && !data?.session) {
-        setNeedsEmailConfirmation(true);
-        setSignupComplete(true);
-      } else if (data?.session) {
-        // Immediate login if email confirmation is turned off in Supabase project settings
-        navigate('/dashboard', { replace: true });
-      } else {
-        setSignupComplete(true);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setServerError(data.message || 'Registration could not be completed with university records.');
+        return;
       }
-    } catch (err) {
-      console.error('[SignUp] Registration error:', err);
-      let message = err.message || 'Failed to create account. Please try again.';
-      if (message.includes('User already registered')) {
-        message = 'An account with this email address already exists. Please sign in instead.';
-      }
-      setServerError(message);
+
+      setSignupComplete(true);
+    } catch {
+      setServerError('Unable to connect to the registration service. Please verify your connection or try again later.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +107,7 @@ export default function SignUp() {
     <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
       <HeroAnimatedBackground variant="ambient" />
       <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-        <div className="glass-card form-entrance" style={{ width: '100%', maxWidth: '480px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="glass-card form-entrance auth-card" style={{ width: '100%', maxWidth: '460px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -138,7 +120,7 @@ export default function SignUp() {
           </p>
         </div>
 
-        {/* Successful Registration Screen / Email Confirmation Notice */}
+        {/* Successful Registration Screen */}
         {signupComplete ? (
           <div style={{ textAlign: 'center' }}>
             <div 
@@ -159,18 +141,12 @@ export default function SignUp() {
               <div style={{ fontSize: '0.92rem', lineHeight: 1.6 }}>
                 <strong>Account created successfully!</strong>
                 <p style={{ marginTop: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                  {needsEmailConfirmation ? (
-                    <>
-                      We sent a verification email to <strong>{formData.email}</strong>. Please check your inbox (and spam folder) and click the confirmation link to activate your account.
-                    </>
-                  ) : (
-                    <>Your account is now ready. You can sign in immediately.</>
-                  )}
+                  Your account is active. You can now sign in using your registration number <strong>{formData.registrationNumber.trim().toUpperCase()}</strong> as your password.
                 </p>
               </div>
             </div>
 
-            <Link to="/login" className="btn btn-primary" style={{ width: '100%' }}>
+            <Link to="/login" className="btn btn-primary" style={{ width: '100%' }} id="signup-proceed-login-btn">
               Proceed to Sign In <ArrowRight size={16} />
             </Link>
           </div>
@@ -198,6 +174,37 @@ export default function SignUp() {
                 <span>{serverError}</span>
               </div>
             )}
+
+            {/* University Registration Number */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-reg-number">
+                University Registration Number
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="signup-reg-number"
+                  name="registrationNumber"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="e.g. 251FA04G44"
+                  value={formData.registrationNumber}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className={`form-input ${errors.registrationNumber ? 'is-invalid' : ''}`}
+                  style={{ paddingLeft: '2.5rem', textTransform: 'uppercase' }}
+                />
+                <GraduationCap 
+                  size={18} 
+                  color="var(--text-dim)" 
+                  style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} 
+                />
+              </div>
+              {errors.registrationNumber && (
+                <div className="form-error" id="signup-reg-number-error">
+                  <AlertCircle size={14} /> {errors.registrationNumber}
+                </div>
+              )}
+            </div>
 
             {/* Full Name */}
             <div className="form-group">
@@ -230,139 +237,8 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Email Field */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-email">
-                Email Address
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className={`form-input ${errors.email ? 'is-invalid' : ''}`}
-                  style={{ paddingLeft: '2.5rem' }}
-                />
-                <Mail 
-                  size={18} 
-                  color="var(--text-dim)" 
-                  style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} 
-                />
-              </div>
-              {errors.email && (
-                <div className="form-error" id="signup-email-error">
-                  <AlertCircle size={14} /> {errors.email}
-                </div>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-password">
-                Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="signup-password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="At least 6 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className={`form-input ${errors.password ? 'is-invalid' : ''}`}
-                  style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
-                />
-                <Lock 
-                  size={18} 
-                  color="var(--text-dim)" 
-                  style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} 
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '0.85rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-dim)',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  id="signup-toggle-password"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.password && (
-                <div className="form-error" id="signup-password-error">
-                  <AlertCircle size={14} /> {errors.password}
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password Field */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="signup-confirm-password">
-                Confirm Password
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="signup-confirm-password"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Re-enter your password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className={`form-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                  style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
-                />
-                <Lock 
-                  size={18} 
-                  color="var(--text-dim)" 
-                  style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} 
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '0.85rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-dim)',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  id="signup-toggle-confirm-password"
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <div className="form-error" id="signup-confirm-password-error">
-                  <AlertCircle size={14} /> {errors.confirmPassword}
-                </div>
-              )}
-            </div>
-
             {/* Terms Agreement Checkbox */}
-            <div className="form-group" style={{ marginTop: '0.5rem' }}>
+            <div className="form-group" style={{ marginTop: '0.75rem' }}>
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -409,7 +285,7 @@ export default function SignUp() {
         <div style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
           Already have an account?{' '}
           <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }} id="signup-switch-login">
-            Sign in
+            Sign In
           </Link>
         </div>
 

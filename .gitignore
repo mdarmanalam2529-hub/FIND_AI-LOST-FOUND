@@ -18,7 +18,11 @@ dist-ssr
 .env.development
 .env.local
 .env.*.local
+.env.*
+supabase/.env
+supabase/.env.*
 !.env.example
+!.env.local.example
 
 # Editor directories and files
 .vscode/*
@@ -59,3 +63,7 @@ supabase/.temp/
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
+
+# Private Student Registry & CSV Data Files
+*.csv
+registry/

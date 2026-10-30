@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, ArrowLeft } from 'lucide-react';
@@ -15,32 +15,9 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [linkError, setLinkError] = useState(null);
+  const [linkError] = useState(() => { const hash = window.location.hash; const search = window.location.search; const parseParams = (str) => { if (!str) return {}; const query = str.startsWith('#') || str.startsWith('?') ? str.substring(1) : str; const params = {}; new URLSearchParams(query).forEach((val, key) => { params[key] = val; }); return params; }; const hashParams = parseParams(hash); const searchParams = parseParams(search); const allParams = { ...searchParams, ...hashParams }; if (allParams.error || allParams.error_description) { return allParams.error_description?.replace(/\+/g, ' ') || 'This password reset link is invalid or has expired.'; } return null; });
 
-  // Check for expired or invalid link errors in URL hash or search params on mount
-  useEffect(() => {
-    const hash = window.location.hash;
-    const search = window.location.search;
 
-    const parseParams = (str) => {
-      if (!str) return {};
-      const query = str.startsWith('#') || str.startsWith('?') ? str.substring(1) : str;
-      const params = {};
-      new URLSearchParams(query).forEach((val, key) => {
-        params[key] = val;
-      });
-      return params;
-    };
-
-    const hashParams = parseParams(hash);
-    const searchParams = parseParams(search);
-    const allParams = { ...searchParams, ...hashParams };
-
-    if (allParams.error || allParams.error_description) {
-      const desc = allParams.error_description?.replace(/\+/g, ' ') || 'This password reset link is invalid or has expired.';
-      setLinkError(desc);
-    }
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,7 +54,7 @@ export default function ResetPassword() {
     <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
       <HeroAnimatedBackground variant="ambient" />
       <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-        <div className="glass-card form-entrance" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="glass-card form-entrance auth-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>

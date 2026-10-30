@@ -41,9 +41,16 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
    ```
 
 2. **Database Migrations:**
-   Run the following migration scripts in your **Supabase Dashboard -> SQL Editor**:
-   - `supabase/migrations/20261018_create_items_table.sql` (Schema & RLS)
-   - `supabase/migrations/20261018_create_item_images_storage.sql` (Private storage bucket)
+   Run the migration scripts in your **Supabase Dashboard -> SQL Editor** in sequential order:
+   - `supabase/migrations/20261018100000_create_items_table.sql` (Items schema & base RLS)
+   - `supabase/migrations/20261018110000_create_item_images_storage.sql` (Private storage bucket)
+   - `supabase/migrations/20261019100000_create_hybrid_claims_system.sql` (Claims & handovers)
+   - `supabase/migrations/20261019110000_add_admin_and_update_policies.sql` (Admin policies)
+   - `supabase/migrations/20261023100000_harden_claim_and_admin_authorization.sql` (Authorization hardening)
+   - `supabase/migrations/20261025100000_harden_foreign_key_preservation.sql` (FK preservation)
+   - `supabase/migrations/20261025110000_create_student_registry_and_profiles.sql` (Student registry & profiles)
+   - `supabase/migrations/20261025120000_create_account_recovery_and_audit_logs.sql` (Account recovery & audit)
+   - `supabase/migrations/20261026100000_create_handover_incidents_and_verification.sql` (Handover holds & incidents)
 
 ---
 

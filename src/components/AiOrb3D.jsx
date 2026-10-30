@@ -58,8 +58,10 @@ export default function AiOrb3D({
     const displaySize = size;
     canvas.width = displaySize * dpr;
     canvas.height = displaySize * dpr;
-    canvas.style.width = `${displaySize}px`;
-    canvas.style.height = `${displaySize}px`;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.maxWidth = `${displaySize}px`;
+    canvas.style.maxHeight = `${displaySize}px`;
 
     // 3D Sphere Nodes Generator (Fibonacci sphere algorithm for balanced node distribution)
     const nodeCount = 54;
@@ -392,8 +394,8 @@ export default function AiOrb3D({
       className={`ai-orb-container ${className}`}
       style={{
         position: 'relative',
-        width: size,
-        maxWidth: '100%',
+        width: '100%',
+        maxWidth: `${size}px`,
         aspectRatio: '1 / 1',
         margin: '0 auto',
         display: 'flex',

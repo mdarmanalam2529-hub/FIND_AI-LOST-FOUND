@@ -6,7 +6,7 @@ import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -15,23 +15,46 @@ export default function ForgotPassword() {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim()) {
-      setError('Please enter your email address.');
-      return;
-    }
+    const cleanInput = identifier.trim();
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Please enter a valid email address.');
+    if (!cleanInput) {
+      setError('Please enter your university email or registration number.');
       return;
     }
 
     setLoading(true);
     try {
-      await resetPassword(email.trim());
+      // Use backend anti-enumeration recovery endpoint
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier: cleanInput }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        // Fallback to client-side Supabase reset if email format
+        if (cleanInput.includes('@')) {
+          await resetPassword(cleanInput);
+        } else {
+          throw new Error(data.message || 'Unable to process recovery request.');
+        }
+      }
+
       setSuccess(true);
     } catch (err) {
-      console.error('[ForgotPassword] Error:', err);
-      setError(err.message || 'Failed to send password reset email. Please try again.');
+      // For email inputs, attempt direct reset if server endpoint was unreachable
+      if (cleanInput.includes('@')) {
+        try {
+          await resetPassword(cleanInput);
+          setSuccess(true);
+          return;
+        } catch {}
+      }
+      setError(err.message || 'Failed to send password recovery link. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +64,7 @@ export default function ForgotPassword() {
     <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
       <HeroAnimatedBackground variant="ambient" />
       <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-        <div className="glass-card form-entrance" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="glass-card form-entrance auth-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -50,7 +73,7 @@ export default function ForgotPassword() {
           </div>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>Reset Password</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Enter your account email and we'll send you a password recovery link
+            Enter your registration number or registered email to receive a password recovery link
           </p>
         </div>
 
@@ -73,8 +96,8 @@ export default function ForgotPassword() {
             >
               <CheckCircle2 size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
-                <strong style={{ color: 'var(--found-accent)' }}>Recovery email sent!</strong><br />
-                We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and click the link to choose a new password.
+                <strong style={{ color: 'var(--found-accent)' }}>Recovery request submitted</strong><br />
+                If an active account exists matching <strong>{identifier}</strong>, a password recovery link has been sent to the official registered email address. Please check your inbox and click the link to choose a new password.
               </div>
             </div>
 
@@ -106,20 +129,20 @@ export default function ForgotPassword() {
               </div>
             )}
 
-            {/* Email Field */}
+            {/* Identifier Field */}
             <div className="form-group">
               <label className="form-label" htmlFor="forgot-email">
-                Registered Email Address
+                University Registration Number or Email Address
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   id="forgot-email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  value={email}
+                  type="text"
+                  autoComplete="username"
+                  placeholder="e.g. 251FA04G44 or student@university.edu"
+                  value={identifier}
                   onChange={(e) => {
-                    setEmail(e.target.value);
+                    setIdentifier(e.target.value);
                     if (error) setError(null);
                   }}
                   disabled={loading}

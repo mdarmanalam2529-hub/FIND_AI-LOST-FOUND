@@ -2,12 +2,15 @@ import express from 'express';
 import {
   isAuthorizedAdmin,
   evaluateClaimRisk,
-  evaluateHighValueAndDispute,
-  isValidClaimStatusTransition,
   createUserNotification,
   createAuditEntry,
-  RISK_LEVELS,
 } from './claimWorkflow.js';
+import {
+  recordSuspiciousIncident,
+  applyHandoverHold,
+  trackAttempt,
+  INCIDENT_SEVERITIES,
+} from './suspiciousHandoverService.js';
 
 export const claimRoutes = express.Router();
 
@@ -393,6 +396,11 @@ claimRoutes.patch('/claims/:id/review', async (req, res) => {
     if (action === 'cancel') {
       if (!isClaimant && !isAdmin) {
         return res.status(403).json({ error: 'Forbidden', message: 'Only the claimant or an admin can cancel this claim.' });
+      }
+
+      // Prevent cancelling already completed or cancelled claims
+      if (claim.status === 'completed' || claim.status === 'cancelled') {
+        return res.status(400).json({ error: 'Bad Request', message: 'Cannot cancel a claim that is already completed or cancelled.' });
       }
 
       const updatedProof = await appendAuditTrail(
@@ -973,7 +981,12 @@ claimRoutes.post('/handovers/:id/coordinate', async (req, res) => {
 /**
  * POST /api/handovers/:id/confirm
  * Dual-confirmation gate: Finder confirms handed over, Claimant confirms received.
- * When both are confirmed (and admin checks pass), triggers return completion!
+ * Hardened with:
+ * - Anti-tamper administrative hold enforcement
+ * - Pre-approval confirmation blocking ('premature_confirmation')
+ * - Unauthorized participant detection ('unauthorized_attempt')
+ * - Competing/conflicting claim detection ('conflicting_claims')
+ * - Rapid burst anomaly tracking ('unusual_attempt_burst')
  */
 claimRoutes.post('/handovers/:id/confirm', async (req, res) => {
   const handoverId = req.params.id;
@@ -1002,24 +1015,151 @@ claimRoutes.post('/handovers/:id/confirm', async (req, res) => {
       return res.status(404).json({ error: 'Not Found', message: 'Handover record not found or access denied.' });
     }
 
-    if (handover.status === 'suspended') {
+    // 1. Enforce Administrative Hold: Flagged or Suspended handovers MUST NOT complete
+    if (handover.status === 'suspended' || handover.is_flagged) {
       return res.status(403).json({
         error: 'Handover Suspended',
-        message: 'This handover has been suspended by administration. Confirmations are temporarily blocked.',
+        message: 'This handover has been placed on administrative hold due to suspicious activity. Confirmations are blocked pending security review.',
+      });
+    }
+
+    // Invariant: Completed or cancelled handovers cannot be confirmed or reopened
+    if (handover.status === 'completed') {
+      return res.status(400).json({
+        error: 'Handover Already Completed',
+        message: 'This handover has already been confirmed by both parties and finalized. It cannot be confirmed again.',
+      });
+    }
+
+    if (handover.status === 'cancelled') {
+      return res.status(400).json({
+        error: 'Handover Cancelled',
+        message: 'This handover has been cancelled and cannot be confirmed.',
+      });
+    }
+
+    // Invariant: Cannot confirm twice
+    if (confirmationType === 'finder_handed_over' && handover.finder_confirmed_at) {
+      return res.status(409).json({
+        error: 'Already Confirmed',
+        message: 'You have already confirmed handing over this item. Waiting for the claimant to confirm receipt.',
+      });
+    }
+
+    if (confirmationType === 'claimant_received' && handover.claimant_confirmed_at) {
+      return res.status(409).json({
+        error: 'Already Confirmed',
+        message: 'You have already confirmed receiving this item. Waiting for the finder to confirm handoff.',
+      });
+    }
+
+    // 2. Suspicious Trigger: Attempt to confirm before claim approval
+    if (!handover.claim || handover.claim.status !== 'approved') {
+      await recordSuspiciousIncident({
+        supabaseClient: dbClient,
+        handoverId,
+        claimId: handover.claim_id,
+        foundItemId: handover.claim?.found_item_id,
+        userId,
+        incidentType: 'premature_confirmation',
+        severity: INCIDENT_SEVERITIES.MEDIUM,
+        reason: `Attempted handover confirmation before claim approval (claim status: ${handover.claim?.status || 'unknown'}).`,
+      });
+      await applyHandoverHold(dbClient, {
+        handoverId,
+        reason: 'Handover confirmation attempted before claim approval',
+      });
+      return res.status(400).json({
+        error: 'Premature Confirmation',
+        message: 'Cannot confirm handover: The associated claim must be approved before confirming physical return.',
       });
     }
 
     const isClaimant = handover.claim.claimant_id === userId;
     const isFinder = handover.claim.found_item.user_id === userId;
 
-    if (confirmationType === 'finder_handed_over' && !isFinder) {
-      return res.status(403).json({ error: 'Forbidden', message: 'Only the finder can confirm handing over the item.' });
+    // 3. Suspicious Trigger: Unauthorized confirmation attempt
+    if (confirmationType === 'finder_handed_over' && !isFinder && !isAdmin) {
+      await recordSuspiciousIncident({
+        supabaseClient: dbClient,
+        handoverId,
+        claimId: handover.claim_id,
+        foundItemId: handover.claim.found_item_id,
+        userId,
+        incidentType: 'unauthorized_attempt',
+        severity: INCIDENT_SEVERITIES.HIGH,
+        reason: 'Unauthorized user attempted to confirm item handover as finder.',
+      });
+      return res.status(403).json({ error: 'Forbidden', message: 'Only the verified finder can confirm handing over the item.' });
     }
-    if (confirmationType === 'claimant_received' && !isClaimant) {
-      return res.status(403).json({ error: 'Forbidden', message: 'Only the claimant can confirm receiving the item.' });
+    if (confirmationType === 'claimant_received' && !isClaimant && !isAdmin) {
+      await recordSuspiciousIncident({
+        supabaseClient: dbClient,
+        handoverId,
+        claimId: handover.claim_id,
+        foundItemId: handover.claim.found_item_id,
+        userId,
+        incidentType: 'unauthorized_attempt',
+        severity: INCIDENT_SEVERITIES.HIGH,
+        reason: 'Unauthorized user attempted to confirm item receipt as claimant.',
+      });
+      return res.status(403).json({ error: 'Forbidden', message: 'Only the verified claimant can confirm receiving the item.' });
+    }
+
+    // 4. Suspicious Trigger: Conflicting active claims on same found item
+    const { data: conflictingClaims } = await readClient
+      .from('item_claims')
+      .select('id, status')
+      .eq('found_item_id', handover.claim.found_item_id)
+      .neq('id', handover.claim_id)
+      .in('status', ['approved', 'under_review']);
+
+    if (conflictingClaims && conflictingClaims.length > 0) {
+      await recordSuspiciousIncident({
+        supabaseClient: dbClient,
+        handoverId,
+        claimId: handover.claim_id,
+        foundItemId: handover.claim.found_item_id,
+        userId,
+        incidentType: 'conflicting_claims',
+        severity: INCIDENT_SEVERITIES.CRITICAL,
+        reason: `Multiple competing approved/under-review claims detected for found item (${conflictingClaims.length} conflicting claims).`,
+      });
+      await applyHandoverHold(dbClient, {
+        handoverId,
+        reason: 'Multiple conflicting claims detected for same found item',
+      });
+      return res.status(403).json({
+        error: 'Conflicting Claims Detected',
+        message: 'Multiple competing claims exist for this item. Handover suspended for administrator verification.',
+      });
+    }
+
+    // 5. Suspicious Trigger: Unusual rapid attempt burst
+    const burstCheck = trackAttempt(`handover:${handoverId}`);
+    if (burstCheck.isBurst) {
+      await recordSuspiciousIncident({
+        supabaseClient: dbClient,
+        handoverId,
+        claimId: handover.claim_id,
+        foundItemId: handover.claim.found_item_id,
+        userId,
+        incidentType: 'unusual_attempt_burst',
+        severity: INCIDENT_SEVERITIES.HIGH,
+        reason: `Unusual rapid confirmation attempts burst (${burstCheck.count} attempts within window).`,
+      });
+      await applyHandoverHold(dbClient, {
+        handoverId,
+        reason: 'Unusual rapid attempt burst detected',
+      });
+      return res.status(429).json({
+        error: 'Too Many Attempts',
+        message: 'Unusual attempt frequency detected. Handover placed on hold for security review.',
+      });
     }
 
     const updateFields = {};
+
     if (confirmationType === 'finder_handed_over') {
       updateFields.finder_confirmed_at = new Date().toISOString();
     } else {

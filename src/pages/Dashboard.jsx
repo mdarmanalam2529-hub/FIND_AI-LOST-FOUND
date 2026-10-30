@@ -1,6 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Sparkles,
+  Search,
+  UploadCloud,
+  Tag,
+  CheckCircle2,
+  ShieldCheck,
+  ShieldAlert,
+  Shield,
+  Mail,
+  Edit3,
+  Trash2,
+  AlertCircle,
+  Loader2,
+  MapPin,
+  Calendar,
+  X,
+  Layers,
+  Globe,
+  Camera,
+  RefreshCw,
+  GraduationCap,
+  Users,
+  FileText,
+  Handshake,
+  User,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { itemsService } from '../services/itemsService';
 import ItemImage from '../components/ItemImage';
 import ClaimsManager from '../components/ClaimsManager';
@@ -8,44 +36,24 @@ import ClaimModal from '../components/ClaimModal';
 import TiltCard from '../components/TiltCard';
 import AiMatchingVisualizer from '../components/AiMatchingVisualizer';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
-import { 
-  Sparkles, 
-  Search, 
-  UploadCloud, 
-  Clock, 
-  Tag, 
-  CheckCircle2, 
-  ShieldCheck, 
-  ShieldAlert,
-  UserCheck, 
-  Mail, 
-  Fingerprint, 
-  Edit3, 
-  Trash2, 
-  AlertCircle, 
-  Loader2, 
-  MapPin, 
-  Calendar, 
-  X, 
-  Layers, 
-  Globe, 
-  Camera, 
-  ImageIcon, 
-  Maximize2,
-  ChevronDown,
-  RefreshCw
-} from 'lucide-react';
+import { adminService } from '../services/adminService';
+import { isAdminUser, isStaffOrAdminUser, isPrimaryAdminUser, getUserRoleTitle } from '../lib/roleHelpers';
+
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  // isConfigured indicates if Supabase credentials are present
 
   const [activeTab, setActiveTab] = useState('my-reports'); // 'my-reports' | 'ai-matches' | 'community-feed' | 'claims'
   const [claimingFoundItem, setClaimingFoundItem] = useState(null);
   const [preselectedLostItem, setPreselectedLostItem] = useState(null);
   const [userReports, setUserReports] = useState([]);
   const [communityReports, setCommunityReports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [tableError, setTableError] = useState(null);
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [adminError, setAdminError] = useState(null);
 
   // Zoom / Lightbox State
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
@@ -75,7 +83,14 @@ export default function Dashboard() {
   const [matchesCache, setMatchesCache] = useState({});
   const [expandedBreakdowns, setExpandedBreakdowns] = useState({});
 
-  const fullName = user?.user_metadata?.full_name || 'Community Member';
+  const isPrimaryAdmin = isPrimaryAdminUser(user);
+  const isAdmin = isAdminUser(user);
+  const isStaffOrAdmin = isStaffOrAdminUser(user);
+  const roleTitle = getUserRoleTitle(user);
+
+  const fullName = user?.user_metadata?.full_name 
+    || (isPrimaryAdmin ? 'Primary Administrator' : isAdmin ? 'System Administrator' : isStaffOrAdmin ? 'Staff Member' : user?.email?.split('@')[0])
+    || 'Community Member';
   const email = user?.email || 'N/A';
   const isEmailVerified = Boolean(user?.email_confirmed_at);
   const memberSince = user?.created_at 
@@ -83,9 +98,9 @@ export default function Dashboard() {
     : 'Recent';
 
   // Load items from Supabase
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    setDataLoading(true);
     setTableError(null);
 
     try {
@@ -103,16 +118,42 @@ export default function Dashboard() {
         setTableError(err.message || 'Failed to fetch items from Supabase.');
       }
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
-  };
+  }, [user]);
+
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [loadData]);
+
+  // Load admin dashboard statistics (authorized admins only)
+  const fetchAdminStats = useCallback(async () => {
+    if (!isAdmin) {
+      setAdminLoading(false);
+      return;
+    }
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      const data = await adminService.fetchDashboard();
+      setAdminStats(data);
+    } catch (err) {
+      console.error('[Dashboard] Admin stats load error:', err);
+      setAdminError(err.message || 'Failed to load admin statistics.');
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAdminStats();
+    }
+  }, [isAdmin, fetchAdminStats]);
 
   // Handle AI Matching
-  const handleFindMatches = async (item, forceRefresh = false) => {
+  const handleFindMatches = useCallback(async (item, forceRefresh = false) => {
     if (!item) return;
     setSelectedMatchItem(item);
     setMatchingTarget(item);
@@ -139,7 +180,7 @@ export default function Dashboard() {
     } finally {
       setMatchingLoading(false);
     }
-  };
+  }, [matchesCache]);
 
   // Auto-select first open report when switching to ai-matches tab if none selected
   useEffect(() => {
@@ -149,7 +190,7 @@ export default function Dashboard() {
         handleFindMatches(firstOpen);
       }
     }
-  }, [activeTab, userReports, selectedMatchItem]);
+  }, [activeTab, userReports, selectedMatchItem, handleFindMatches]);
 
   const toggleBreakdown = (candidateId) => {
     setExpandedBreakdowns((prev) => ({
@@ -290,7 +331,7 @@ export default function Dashboard() {
               {tableError}
             </p>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-              Run the SQL file located at <code>supabase/migrations/20261018_create_items_table.sql</code> in your Supabase SQL Editor.
+              Run the SQL file located at <code>supabase/migrations/20261018100000_create_items_table.sql</code> in your Supabase SQL Editor.
             </p>
           </div>
         </div>
@@ -331,7 +372,28 @@ export default function Dashboard() {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '1.35rem', color: 'var(--text-main)' }}>Welcome, {fullName}</h2>
+              <h2 style={{ fontSize: '1.35rem', color: 'var(--text-main)', margin: 0 }}>Welcome, {fullName}</h2>
+              {isPrimaryAdmin ? (
+                <span className="badge" style={{ background: '#7c3aed', color: '#ffffff', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} id="role-badge-primary-admin">
+                  <ShieldAlert size={14} /> Primary Administrator
+                </span>
+              ) : isAdmin ? (
+                <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} id="role-badge-admin">
+                  <ShieldCheck size={14} /> Administrator
+                </span>
+              ) : isStaffOrAdmin ? (
+                <span className="badge badge-found" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} id="role-badge-staff">
+                  <Shield size={14} /> Staff Member
+                </span>
+              ) : user?.user_metadata?.registration_number ? (
+                <span className="badge badge-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} id="role-badge-student">
+                  <GraduationCap size={14} /> Student ({user.user_metadata.registration_number})
+                </span>
+              ) : (
+                <span className="badge badge-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }} id="role-badge-community">
+                  <User size={14} /> Community Member
+                </span>
+              )}
               {isEmailVerified ? (
                 <span className="badge badge-found" title="Email verified in Supabase">
                   <ShieldCheck size={14} /> Verified Account
@@ -348,7 +410,18 @@ export default function Dashboard() {
               <span>Member since {memberSince}</span>
             </div>
           </div>
-        </div>        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        </div>
+        <div className="dashboard-action-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {isStaffOrAdmin && (
+            <a 
+              href="#admin-panel-section"
+              className="btn btn-primary btn-sm"
+              id="dashboard-admin-panel-btn"
+              style={{ background: '#7c3aed', borderColor: '#7c3aed', color: '#fff' }}
+            >
+              <ShieldCheck size={16} /> Admin Panel
+            </a>
+          )}
           <button 
             type="button" 
             onClick={() => {
@@ -383,7 +456,7 @@ export default function Dashboard() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+      <div className="dashboard-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
         <TiltCard maxTilt={2}>
           <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -436,6 +509,187 @@ export default function Dashboard() {
           </div>
         </TiltCard>
       </div>
+
+      {/* Admin Panel Section (Authorized Admins & Staff Only) */}
+      {isStaffOrAdmin && (
+        <section 
+          id="admin-panel-section" 
+          className="glass-card" 
+          style={{ 
+            marginBottom: '2.5rem', 
+            padding: '1.75rem', 
+            border: '1px solid rgba(124, 58, 237, 0.3)', 
+            background: 'linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+            boxShadow: 'var(--shadow-md)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-md, 8px)', background: 'rgba(124, 58, 237, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={24} color="#8b5cf6" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  Admin Panel
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: isPrimaryAdmin ? '#7c3aed' : 'var(--primary)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                    {roleTitle}
+                  </span>
+                </h3>
+                <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  Centralized administrative controls, identity management, and moderation systems
+                </p>
+              </div>
+            </div>
+
+            <button 
+              type="button" 
+              className="btn btn-secondary btn-sm" 
+              onClick={fetchAdminStats}
+              disabled={adminLoading}
+              id="admin-panel-refresh-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <RefreshCw size={14} className={adminLoading ? 'spin' : ''} />
+              {adminLoading ? 'Refreshing...' : 'Refresh Metrics'}
+            </button>
+          </div>
+
+          {/* Aggregated Statistics Bar */}
+          {adminError ? (
+            <div style={{ padding: '0.75rem 1rem', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid var(--warning-accent)', borderRadius: 'var(--radius-md, 8px)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={18} color="var(--warning-accent)" />
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{adminError}</span>
+            </div>
+          ) : adminStats ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', background: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-lg, 12px)', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Students</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>{adminStats.totalStudents ?? 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Lost Reports</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--lost-accent)' }}>{adminStats.totalLostReports ?? 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Found Reports</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--found-accent)' }}>{adminStats.totalFoundReports ?? 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Open Claims</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>{adminStats.totalClaims ?? 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Handovers</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#06b6d4' }}>{adminStats.totalHandovers ?? 0}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Incidents</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f59e0b' }}>{adminStats.totalIncidents ?? 0}</div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* 5 Visible Management Action Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+            {/* 1. Manage Students */}
+            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <GraduationCap size={20} color="#3b82f6" />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Students</h4>
+                  </div>
+                  <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>Registry</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
+                  Search students by registration number or name, inspect institutional eligibility, and activate or suspend student portal accounts.
+                </p>
+              </div>
+              <Link to="/admin/students" className="btn btn-primary btn-sm" id="admin-panel-manage-students-btn" style={{ justifyContent: 'center' }}>
+                Manage Students &rarr;
+              </Link>
+            </div>
+
+            {/* 2. Manage Admins */}
+            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Users size={20} color="#8b5cf6" />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Admins</h4>
+                  </div>
+                  <span className="badge" style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#8b5cf6', fontSize: '0.7rem', fontWeight: 600 }}>
+                    {isPrimaryAdmin ? 'Primary Admin' : 'Admin'}
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
+                  List staff and administrators, invite or appoint administrative roles through the primary admin, and deactivate or revoke access safely.
+                </p>
+              </div>
+              <Link to="/admin/management" className="btn btn-secondary btn-sm" id="admin-panel-manage-admins-btn" style={{ justifyContent: 'center' }}>
+                Manage Admins &rarr;
+              </Link>
+            </div>
+
+            {/* 3. Manage Reports */}
+            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={20} color="#eab308" />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Reports</h4>
+                  </div>
+                  <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Moderation</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
+                  Review, verify, and moderate reported lost and found items. Handle flagged listings, inspect AI match scores, and resolve duplicates.
+                </p>
+              </div>
+              <Link to="/admin/reports" className="btn btn-secondary btn-sm" id="admin-panel-manage-reports-btn" style={{ justifyContent: 'center' }}>
+                Manage Reports &rarr;
+              </Link>
+            </div>
+
+            {/* 4. Manage Claims */}
+            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldAlert size={20} color="#10b981" />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Claims</h4>
+                  </div>
+                  <span className="badge badge-found" style={{ fontSize: '0.7rem' }}>Verification</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
+                  Review ownership claims, verify claimant proof, approve returns, place claims on administrative hold, and resolve ownership disputes.
+                </p>
+              </div>
+              <Link to="/admin/claims" className="btn btn-secondary btn-sm" id="admin-panel-manage-claims-btn" style={{ justifyContent: 'center' }}>
+                Manage Claims &rarr;
+              </Link>
+            </div>
+
+            {/* 5. Manage Handovers */}
+            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Handshake size={20} color="#06b6d4" />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Handovers</h4>
+                  </div>
+                  <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>Custody</span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
+                  Supervise physical handovers, generate secure handover tokens, track verified item transfers, and manage security custody holds.
+                </p>
+              </div>
+              <Link to="/admin/handovers" className="btn btn-secondary btn-sm" id="admin-panel-manage-handovers-btn" style={{ justifyContent: 'center' }}>
+                Manage Handovers &rarr;
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Tabs: My Reports vs AI Matches vs Community Open Feed vs Claims */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -537,7 +791,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Area */}
-      {loading ? (
+      {(authLoading || dataLoading) ? (
         <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <Loader2 size={32} className="spin" style={{ margin: '0 auto 1rem', color: 'var(--primary-light)' }} />
           <p style={{ color: 'var(--text-muted)' }}>Fetching live items from Supabase...</p>
@@ -571,7 +825,7 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: '1.25rem' }}>
             {userReports.map((item) => (
               <div 
                 key={item.id} 
@@ -924,7 +1178,7 @@ export default function Dashboard() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: '1.25rem' }}>
             {communityReports.map((item) => (
               <div 
                 key={item.id} 

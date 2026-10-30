@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import AdminClaims from './pages/AdminClaims';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -11,7 +13,14 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
+import AdminImportStudents from './pages/AdminImportStudents';
+import AdminStudentManagement from './pages/AdminStudentManagement';
+import AdminIncidents from './pages/AdminIncidents';
+import AdminReports from './pages/AdminReports';
+import AdminHandovers from './pages/AdminHandovers';
+import AdminUserManagement from './pages/AdminUserManagement';
 import './App.css';
 
 // 404 Fallback View
@@ -56,6 +65,86 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/change-password"
+                element={
+                  <ProtectedRoute>
+                    <ChangePassword />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <AdminRoute>
+                    <Dashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/management"
+                element={
+                  <AdminRoute requireAdminRole={true}>
+                    <AdminUserManagement />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <AdminRoute requireAdminRole={true}>
+                    <AdminUserManagement />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/import-students"
+                element={
+                  <AdminRoute requireAdminRole={true}>
+                    <AdminImportStudents />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/incidents"
+                element={
+                  <AdminRoute>
+                    <AdminIncidents />
+                  </AdminRoute>
+                }
+              />
+                <Route
+                  path="/admin/reports"
+                  element={
+                    <AdminRoute>
+                      <AdminReports />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/handovers"
+                  element={
+                    <AdminRoute>
+                      <AdminHandovers />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/claims"
+                  element={
+                    <AdminRoute>
+                      <AdminClaims />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/students"
+                  element={
+                    <AdminRoute requireAdminRole={true}>
+                      <AdminStudentManagement />
+                    </AdminRoute>
+                  }
+                />
 
               {/* 404 Catch-All */}
               <Route path="*" element={<NotFound />} />

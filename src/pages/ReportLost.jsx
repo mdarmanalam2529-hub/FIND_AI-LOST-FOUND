@@ -1,39 +1,24 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itemsService } from '../services/itemsService';
-import { 
-  Search, 
-  MapPin, 
-  Calendar, 
-  Tag, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle2, 
-  Loader2, 
-  Palette,
-  LogIn,
-  ArrowRight,
-  Camera,
-  X,
-  UploadCloud,
-  ImageIcon,
-  ShieldCheck
-} from 'lucide-react';
+import { Search, LogIn, ArrowRight, CheckCircle2, X, Camera, AlertCircle, ShieldCheck, Loader2, Palette, MapPin } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ReportLost() {
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
+  // Helper to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+  const [formData, setFormData] = useState(() => ({
     title: '',
     category: 'electronics',
     color: '',
     location: '',
-    incidentDate: new Date().toISOString().split('T')[0],
+    incidentDate: getTodayDate(),
     description: '',
-  });
+  }));
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -255,7 +240,7 @@ export default function ReportLost() {
           </div>
         ) : (
           /* Form View */
-          <div className="glass-card">
+          <div className="glass-card report-form-card">
             {serverError && (
               <div 
                 style={{ 

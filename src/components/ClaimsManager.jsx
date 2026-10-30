@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { claimsService } from '../services/claimsService';
 import { 
   ShieldCheck, 
@@ -49,7 +49,7 @@ export default function ClaimsManager() {
     setTimeout(() => setSuccessToast(null), 5000);
   };
 
-  const loadClaims = async () => {
+  const loadClaims = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -61,11 +61,11 @@ export default function ClaimsManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadClaims();
-  }, []);
+  }, [loadClaims]);
 
   const handleReviewAction = async (claimId, action) => {
     let reason = '';
@@ -137,9 +137,8 @@ export default function ClaimsManager() {
 
   const handleConfirmHandover = async (handoverId, confirmationType) => {
     const promptMsg = confirmationType === 'finder_handed_over'
-      ? 'Confirm that you have physically handed over the item to the claimant?'
+      ? 'Confirm that you have handed over the item to the verified claimant?'
       : 'Confirm that you have received your item and verified its condition?';
-
     if (!window.confirm(promptMsg)) return;
 
     setActionLoadingId(handoverId);
@@ -622,6 +621,13 @@ export default function ClaimsManager() {
                       </span>
                     </div>
 
+                    {(handover.status === 'suspended' || handover.is_flagged) && (
+                      <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', padding: '0.65rem 0.85rem', marginBottom: '0.75rem', color: '#ef4444', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem', lineHeight: 1.4 }}>
+                        <ShieldAlert size={16} style={{ flexShrink: 0 }} />
+                        <span><strong>Handover Suspended:</strong> This handover is placed on administrative hold due to security verification. Meeting coordination and confirmations are blocked pending clearance.</span>
+                      </div>
+                    )}
+
                     <div style={{ background: '#f8fafc', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0.55rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.79rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.45rem', lineHeight: 1.4 }}>
                       <ShieldCheck size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
                       <span><strong>Safe Handover Protocol:</strong> Meet exclusively at well-lit public desks (campus security, building reception, or library service desk). Confirm physical item condition together before marking returned.</span>
@@ -717,6 +723,7 @@ export default function ClaimsManager() {
                             Claimant Received: {handover.claimant_confirmed_at ? 'Confirmed' : 'Pending'}
                           </span>
                         </div>
+
 
                         {/* Confirmation Actions */}
                         {!isCompleted && handover.status !== 'suspended' && (

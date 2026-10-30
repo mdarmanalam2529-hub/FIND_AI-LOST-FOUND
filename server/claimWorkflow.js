@@ -61,8 +61,37 @@ export function createAuditEntry({ actorId, actorEmail = null, actorRole, action
   };
 }
 
+// Role Definitions
+export const ROLES = {
+  STUDENT: 'student',
+  STAFF: 'staff',
+  ADMIN: 'admin',
+  PRIMARY_ADMIN: 'primary_admin',
+  SUPER_ADMIN: 'super_admin',
+};
+
 /**
- * Check if user is an authorized admin/security reviewer.
+ * Check if user is a primary (super) administrator.
+ * Primary administrators have authority to appoint or remove other administrators.
+ */
+export function isPrimaryAdmin(user) {
+  if (!user || typeof user !== 'object') return false;
+  const appRole = user.app_metadata?.role;
+  if (appRole === 'primary_admin' || appRole === 'super_admin') {
+    return true;
+  }
+  if (user.email && user.email_confirmed_at) {
+    const primaryAdminEmail = (process.env.PRIMARY_ADMIN_EMAIL || process.env.ADMIN_EMAILS || '')
+      .split(',')[0]?.trim().toLowerCase();
+    if (primaryAdminEmail && user.email.toLowerCase() === primaryAdminEmail) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if user is an authorized admin/security reviewer/primary admin.
  * Derives strictly from trusted server-managed authorization:
  * - Supabase app_metadata.role (set exclusively by Supabase backend / service role)
  * - Or server-configured ADMIN_EMAILS env variable ONLY when user identity is confirmed (email_confirmed_at).
@@ -73,7 +102,7 @@ export function isAuthorizedAdmin(user) {
   
   // 1. Check server-managed app_metadata (immutable by client users)
   const appRole = user.app_metadata?.role;
-  if (appRole === 'admin' || appRole === 'security_reviewer') {
+  if (appRole === 'admin' || appRole === 'primary_admin' || appRole === 'super_admin' || appRole === 'security_reviewer') {
     return true;
   }
 
@@ -92,6 +121,22 @@ export function isAuthorizedAdmin(user) {
   }
 
   return false;
+}
+
+/**
+ * Check if user has staff privileges.
+ */
+export function isStaff(user) {
+  if (!user || typeof user !== 'object') return false;
+  return user.app_metadata?.role === 'staff';
+}
+
+/**
+ * Check if user has staff or administrator privileges.
+ */
+export function isStaffOrAdmin(user) {
+  if (!user || typeof user !== 'object') return false;
+  return isStaff(user) || isAuthorizedAdmin(user);
 }
 
 /**

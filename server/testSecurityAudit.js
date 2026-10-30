@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import {
-  rateLimiter,
-  rateLimitMap,
-} from './index.js';
+
+process.env.NODE_ENV = 'test';
+const { rateLimiter, rateLimitMap } = await import('./index.js');
 import {
   isValidStoragePath,
 } from './clipMatcher.js';

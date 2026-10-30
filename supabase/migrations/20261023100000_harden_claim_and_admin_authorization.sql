@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration: 20261023_harden_claim_and_admin_authorization.sql
+-- Migration: 20261023100000_harden_claim_and_admin_authorization.sql
 -- Project: FindAI - AI Lost-and-Found Matcher
 -- Milestone 2: Critical Authorization Hardening
 --

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itemsService } from '../services/itemsService';
 import { 
@@ -7,7 +7,6 @@ import {
   MapPin, 
   Calendar, 
   Tag, 
-  FileText, 
   AlertCircle, 
   CheckCircle2, 
   Loader2, 
@@ -20,9 +19,12 @@ import {
 } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
+// Helper to get today's date in YYYY-MM-DD format
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
 export default function ReportFound() {
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+
 
   const [formData, setFormData] = useState({
     title: '',
@@ -30,7 +32,7 @@ export default function ReportFound() {
     color: '',
     location: '',
     custodyLocation: '',
-    incidentDate: new Date().toISOString().split('T')[0],
+    incidentDate: getTodayDate(),
     description: '',
   });
 
@@ -170,7 +172,7 @@ export default function ReportFound() {
       color: '',
       location: '',
       custodyLocation: '',
-      incidentDate: new Date().toISOString().split('T')[0],
+      incidentDate: todayDate,
       description: '',
     });
     handleRemoveImage();
@@ -259,7 +261,7 @@ export default function ReportFound() {
           </div>
         ) : (
           /* Form View */
-          <div className="glass-card">
+          <div className="glass-card report-form-card">
             {serverError && (
               <div 
                 style={{ 

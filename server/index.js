@@ -1,27 +1,46 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import { rankCandidateMatches, DEFAULT_WEIGHTS, getEmbeddingPipeline } from './aiMatcher.js';
 import { getClipPipeline, getClipStatus } from './clipMatcher.js';
 import { claimRoutes } from './claimRoutes.js';
+import { adminDashboardRouter } from './adminDashboardRoutes.js';
+import { adminStudentRouter, authStudentRouter } from './studentRoutes.js';
+import { adminIncidentRouter } from './incidentRoutes.js';
+import { adminReportRouter } from './adminReportRoutes.js';
+import { adminHandoverRouter } from './adminHandoverRoutes.js';
+import { adminUserRouter } from './adminUserRoutes.js';
 
-dotenv.config();
+import { loadAndValidateEnvironment } from './envConfig.js';
+
+// Enforce explicit, isolated environment configuration.
+// Fails closed if development mode lacks .env.local, preventing accidental writes to production.
+export const activeEnv = loadAndValidateEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Supabase Configuration from environment
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+// Supabase Configuration from validated environment
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = 
+  process.env.SUPABASE_PUBLISHABLE_KEY || 
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
   process.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const serviceSupabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null;
+
+export const anonSupabase = (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -36,8 +55,25 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('[Server Warning] SUPABASE_SERVICE_ROLE_KEY not configured. Admin review queue queries will run under standard client RLS.');
 }
 
-// Middleware
-app.use(express.json({ limit: '64kb' }));
+// Middleware: allow up to 5MB JSON payload to accommodate student registry CSV uploads
+app.use(express.json({ limit: '5mb' }));
+
+// Body parsing error handler: ensures JSON responses rather than Express default HTML
+app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+    return res.status(413).json({
+      error: 'Payload Too Large',
+      message: 'Request payload exceeds the maximum allowed limit of 5MB.',
+    });
+  }
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      error: 'Bad Request',
+      message: 'Malformed JSON payload received.',
+    });
+  }
+  next(err);
+});
 
 const allowedOrigins = [
   'http://localhost:5173',
@@ -47,7 +83,18 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // allow requests with no origin (like mobile apps, curl, or same-origin)
+      if (!origin) return callback(null, true);
+      // allow localhost, 127.0.0.1, or any local IP on LAN (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      if (
+        allowedOrigins.includes(origin) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
@@ -97,7 +144,7 @@ export function rateLimiter(req, res, next) {
  * Verifies Supabase JWT from the Authorization: Bearer <token> header.
  * Derives user identity strictly from the verified token.
  */
-async function authenticateUser(req, res, next) {
+export async function authenticateUser(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
@@ -302,6 +349,36 @@ app.post('/api/matches', authenticateUser, rateLimiter, async (req, res) => {
   }
 });
 
+// Mount Public Student Registration and Authentication routes FIRST (rate limited, supplies server clients)
+// Must be mounted before protected /api routes to prevent authenticateUser middleware interception
+app.use('/api/auth', rateLimiter, (req, res, next) => {
+  req.serviceSupabase = serviceSupabase;
+  req.anonSupabase = anonSupabase;
+  next();
+}, authStudentRouter);
+
+// Mount Admin Student Registry Management routes (authenticated admin only)
+app.use('/api/admin/student-registry', authenticateUser, rateLimiter, adminStudentRouter);
+
+// Mount Admin Suspicious Incident Management routes (authenticated admin only)
+app.use('/api/admin/incidents', authenticateUser, rateLimiter, adminIncidentRouter);
+
+// Admin unified dashboard route
+app.use('/api/admin/dashboard', authenticateUser, rateLimiter, adminDashboardRouter);
+
+// Mount Admin Report Moderation routes (authenticated admin only)
+app.use('/api/admin/reports', authenticateUser, rateLimiter, adminReportRouter);
+
+// Mount Admin Handover Management routes (authenticated admin only)
+app.use('/api/admin/handovers', authenticateUser, rateLimiter, adminHandoverRouter);
+
+// Mount Admin Staff & Role Management routes (authenticated admin only)
+app.use('/api/admin/users', authenticateUser, rateLimiter, (req, res, next) => {
+  req.serviceSupabase = serviceSupabase;
+  req.anonSupabase = anonSupabase;
+  next();
+}, adminUserRouter);
+
 // Mount Hybrid Claim & Return System routes (protected by authentication & rate limiting)
 app.use('/api', authenticateUser, rateLimiter, claimRoutes);
 
@@ -325,8 +402,26 @@ Promise.allSettled([
     .then(() => console.log('[AI Server] CLIP ViT-B/32 image embedding model loaded and ready.')),
 ]).catch((err) => console.warn('[AI Server] Model background pre-warming deferred:', err.message));
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', (err) => {
+  if (err) {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[AI Server Error] Port ${PORT} is already in use by another process.`);
+      console.error(`[AI Server Error] Please stop the existing process or set a different PORT in environment.`);
+    } else {
+      console.error(`[AI Server Error] Failed to start server on port ${PORT}:`, err.message);
+    }
+    process.exit(1);
+  }
   console.log(`[AI Server] FindAI Matching Engine running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[AI Server Error] Port ${PORT} is already in use by another process.`);
+  } else {
+    console.error(`[AI Server Error] Server error:`, err.message);
+  }
+  process.exit(1);
 });
 
 export default app;

@@ -8,11 +8,22 @@ import { createClient } from '@supabase/supabase-js';
  * NEVER expose the service_role key or database password in frontend client code.
  */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Critical Security Check: Ensure service-role credentials are NEVER present in client bundle
+if (typeof import.meta !== 'undefined' && import.meta.env) {
+  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRoleKey && serviceRoleKey.trim() !== '') {
+    throw new Error(
+      '[Security Fatal] SUPABASE_SERVICE_ROLE_KEY detected in frontend client environment (VITE_SUPABASE_SERVICE_ROLE_KEY). Service keys must remain strictly backend-only.'
+    );
+  }
+}
+
+const clientEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
+const supabaseUrl = clientEnv?.VITE_SUPABASE_URL;
 // Accepts either VITE_SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_ANON_KEY for convenience
 const supabasePublishableKey = 
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
-  import.meta.env.VITE_SUPABASE_ANON_KEY;
+  clientEnv?.VITE_SUPABASE_PUBLISHABLE_KEY || 
+  clientEnv?.VITE_SUPABASE_ANON_KEY;
 
 /**
  * Checks if the Supabase environment variables are properly provided
@@ -36,10 +47,21 @@ export const supabase = isSupabaseConfigured
         detectSessionInUrl: true,
       },
     })
-  : null;
+  : // Proxy that throws a helpful error on any property access when not configured
+    new Proxy(
+      {},
+      {
+        get(_target, _prop) {
+          throw new Error(
+            '[Supabase] Configuration missing or unconfigured for current environment. ' +
+            'For local development, copy .env.local.example to .env.local with your isolated development credentials.'
+          );
+        },
+      }
+    );
 
-if (!isSupabaseConfigured && import.meta.env.DEV) {
+if (!isSupabaseConfigured && (typeof import.meta !== 'undefined' && import.meta.env?.DEV)) {
   console.info(
-    '[Supabase Setup] Supabase credentials not found or incomplete in .env. Configure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY when ready to activate backend services.'
+    '[Supabase Setup] Development Supabase credentials not found in .env.local. Configure .env.local when ready to activate backend services.'
   );
 }
