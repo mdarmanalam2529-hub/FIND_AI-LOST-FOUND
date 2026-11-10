@@ -277,8 +277,8 @@ export default function AdminReports() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem 1rem 4rem' }}>
-      {/* Toast Notification */}
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          {/* Toast Notification */}
       {successToast && (
         <div
           style={{
@@ -462,6 +462,7 @@ export default function AdminReports() {
               id="admin-filter-indicator"
             >
               <option value="all">All Moderation Indicators</option>
+              <option value="community_reported">Community Flagged (Student Reports)</option>
               <option value="disputed">Disputed / Competing</option>
               <option value="suspicious">Suspicious Flags</option>
               <option value="competing">Multiple Competing Claims</option>
@@ -549,6 +550,7 @@ export default function AdminReports() {
           {reports.map((report) => {
             const hasDispute = report.indicators?.is_disputed || report.indicators?.has_competing_claims;
             const isSuspicious = report.indicators?.is_flagged_suspicious || report.indicators?.has_security_incidents;
+            const isCommunityReported = report.indicators?.is_community_reported;
             const isDuplicate = report.indicators?.is_duplicate_resolved;
             const isReviewed = report.indicators?.is_reviewed;
 
@@ -560,7 +562,9 @@ export default function AdminReports() {
                   display: 'flex',
                   flexDirection: 'column',
                   padding: '1.1rem',
-                  border: isSuspicious
+                  border: isCommunityReported
+                    ? '1.5px solid #FCA5A5'
+                    : isSuspicious
                     ? '1.5px solid var(--lost-border)'
                     : hasDispute
                     ? '1.5px solid var(--warning-border)'
@@ -578,6 +582,11 @@ export default function AdminReports() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {isCommunityReported && (
+                      <span className="badge" style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', fontSize: '0.7rem' }}>
+                        <ShieldAlert size={11} style={{ marginRight: '2px', display: 'inline' }} /> Community Flagged ({report.indicators?.community_report_count || 1})
+                      </span>
+                    )}
                     {hasDispute && (
                       <span className="badge" style={{ background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A', fontSize: '0.7rem' }}>
                         <AlertTriangle size={11} style={{ marginRight: '2px', display: 'inline' }} /> Disputed
@@ -720,6 +729,20 @@ export default function AdminReports() {
                   </button>
 
                   <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    {/* Dismiss Community Flag */}
+                    {isCommunityReported && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.78rem', padding: '0.35rem 0.55rem', color: '#DC2626' }}
+                        onClick={() => handleInitiateAction('dismiss_community_flags', report)}
+                        title="Dismiss community abuse reports for this listing"
+                        id={`btn-dismiss-flag-${report.id}`}
+                      >
+                        <ShieldAlert size={13} /> Dismiss Flag
+                      </button>
+                    )}
+
                     {/* Mark Reviewed */}
                     {!isReviewed && (
                       <button
@@ -1027,6 +1050,35 @@ export default function AdminReports() {
                     )}
                   </div>
                 </div>
+
+                {/* Community Complaints Section */}
+                {selectedReport.indicators?.community_reports && selectedReport.indicators.community_reports.length > 0 && (
+                  <div style={{ marginBottom: '1.25rem', padding: '0.85rem 1rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#B91C1C', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <ShieldAlert size={16} color="#DC2626" />
+                        Community Complaints ({selectedReport.indicators.community_reports.length})
+                      </h4>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.55rem', color: '#DC2626', borderColor: '#FCA5A5' }}
+                        onClick={() => handleInitiateAction('dismiss_community_flags', selectedReport)}
+                      >
+                        Dismiss Flags
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      {selectedReport.indicators.community_reports.map((cr, idx) => (
+                        <div key={cr.id || idx} style={{ fontSize: '0.82rem', color: '#7F1D1D', background: '#FFFFFF', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
+                          <div><strong>Reason:</strong> {cr.reason}</div>
+                          {cr.explanation && <div style={{ marginTop: '2px', color: '#450A0A' }}>"{cr.explanation}"</div>}
+                          <div style={{ fontSize: '0.72rem', color: '#991B1B', marginTop: '2px' }}>Reported: {new Date(cr.reported_at).toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Matching Inspection */}
                 <div style={{ marginBottom: '1.25rem' }}>

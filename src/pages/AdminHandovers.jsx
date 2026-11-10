@@ -226,8 +226,8 @@ export default function AdminHandovers() {
   }
 
   return (
-    <div className="container" style={{ padding: '2rem 1rem 4rem' }}>
-      {/* Toast Notification */}
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          {/* Toast Notification */}
       {successToast && (
         <div
           style={{

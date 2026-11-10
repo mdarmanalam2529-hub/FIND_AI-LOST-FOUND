@@ -37,10 +37,10 @@ export default function Footer() {
           <div className="footer-col">
             <h4>Account & Trust</h4>
             <ul className="footer-links">
-              <li><Link to="/login">Sign In</Link></li>
-              <li><Link to="/signup">Create Account</Link></li>
-              <li><a href="#how-it-works">How Matching Works</a></li>
-              <li><a href="#privacy">Privacy Principles</a></li>
+              <li><Link to="/login" id="footer-link-signin">Sign In</Link></li>
+              <li><Link to="/signup" id="footer-link-signup">Create Account</Link></li>
+              <li><Link to="/#how-it-works" id="footer-link-how-it-works">How Matching Works</Link></li>
+              <li><Link to="/#privacy" id="footer-link-privacy">Privacy Principles</Link></li>
             </ul>
           </div>
 

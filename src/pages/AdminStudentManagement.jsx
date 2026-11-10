@@ -144,7 +144,7 @@ export default function AdminStudentManagement() {
   }
 
   return (
-    <div className="container" style={{ padding: '2.5rem 1.5rem', maxWidth: '1200px' }} id="admin-student-management">
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }} id="admin-student-management">
       {/* Toast Notification */}
       {toastMessage && (
         <div

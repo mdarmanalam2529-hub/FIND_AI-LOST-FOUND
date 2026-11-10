@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <!-- Background Blur Filter -->
+    <filter id="backdrop-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" />
+    </filter>
+    <filter id="modal-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="24" stdDeviation="20" flood-color="#0f172a" flood-opacity="0.22" />
+    </filter>
+    <linearGradient id="primary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+  </defs>
+
+  <style>
+    .font-fira { font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  </style>
+
+  <!-- Simulated Blurred Dashboard Canvas in Background -->
+  <rect width="1200" height="800" fill="#F5F7FB" />
+  
+  <!-- Faded Sidebar in Background -->
+  <rect x="0" y="0" width="220" height="800" fill="#FFFFFF" opacity="0.6" />
+  <line x1="220" y1="0" x2="220" y2="800" stroke="#E2E8F0" stroke-width="1" />
+  
+  <!-- Faded Navbar in Background -->
+  <rect x="220" y="0" width="980" height="64" fill="#FFFFFF" opacity="0.6" />
+  <line x1="220" y1="64" x2="1200" y2="64" stroke="#E2E8F0" stroke-width="1" />
+  
+  <!-- Faded Dashboard Cards -->
+  <rect x="250" y="90" width="210" height="96" rx="12" fill="#FFFFFF" opacity="0.4" stroke="#E2E8F0" />
+  <rect x="480" y="90" width="210" height="96" rx="12" fill="#FFFFFF" opacity="0.4" stroke="#E2E8F0" />
+  <rect x="710" y="90" width="210" height="96" rx="12" fill="#FFFFFF" opacity="0.4" stroke="#E2E8F0" />
+  <rect x="940" y="90" width="210" height="96" rx="12" fill="#FFFFFF" opacity="0.4" stroke="#E2E8F0" />
+
+  <!-- Semi-Transparent Darkened Backdrop -->
+  <rect width="1200" height="800" fill="#0F172A" opacity="0.45" />
+
+  <!-- Centered Command Palette Modal (640px x 520px) -->
+  <g transform="translate(280, 140)" filter="url(#modal-shadow)">
+    <!-- Modal Shell -->
+    <rect width="640" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" />
+
+    <!-- Search Input Header -->
+    <g transform="translate(24, 20)">
+      <!-- Search Icon -->
+      <circle cx="16" cy="16" r="8" fill="none" stroke="#2563EB" stroke-width="2.5" />
+      <line x1="22" y1="22" x2="28" y2="28" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" />
+      
+      <!-- Input Text -->
+      <text x="40" y="22" class="font-fira" font-size="16" font-weight="500" fill="#0F172A">
+        Hydro Flask|
+      </text>
+
+      <!-- ESC Key Badge -->
+      <rect x="540" y="6" width="46" height="24" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" />
+      <text x="563" y="22" class="font-fira" font-size="11" font-weight="700" fill="#64748B" text-anchor="middle">ESC</text>
+    </g>
+
+    <!-- Divider Line -->
+    <line x1="0" y1="68" x2="640" y2="68" stroke="#E2E8F0" stroke-width="1" />
+
+    <!-- Section: Quick Categories Filter Tabs -->
+    <g transform="translate(24, 84)">
+      <text x="0" y="14" class="font-fira" font-size="11" font-weight="700" fill="#94A3B8" letter-spacing="0.06em">QUICK FILTERS</text>
+      
+      <!-- Pill 1: All Results -->
+      <rect x="90" y="0" width="70" height="24" rx="12" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1" />
+      <text x="125" y="15" class="font-fira" font-size="11" font-weight="700" fill="#2563EB" text-anchor="middle">All (6)</text>
+      
+      <!-- Pill 2: Lost Reports -->
+      <rect x="170" y="0" width="86" height="24" rx="12" fill="#FEF2F2" stroke="#FECACA" stroke-width="1" />
+      <text x="213" y="15" class="font-fira" font-size="11" font-weight="600" fill="#DC2626" text-anchor="middle">Lost (2)</text>
+      
+      <!-- Pill 3: Found Reports -->
+      <rect x="266" y="0" width="94" height="24" rx="12" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1" />
+      <text x="313" y="15" class="font-fira" font-size="11" font-weight="600" fill="#16A34A" text-anchor="middle">Found (3)</text>
+      
+      <!-- Pill 4: Claims -->
+      <rect x="370" y="0" width="84" height="24" rx="12" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1" />
+      <text x="412" y="15" class="font-fira" font-size="11" font-weight="600" fill="#D97706" text-anchor="middle">Claims (1)</text>
+    </g>
+
+    <!-- Search Results Section -->
+    <g transform="translate(20, 126)">
+      <!-- Result 1: Active Highlighted Item -->
+      <g>
+        <rect x="0" y="0" width="600" height="68" rx="10" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5" />
+        
+        <!-- Icon Bubble -->
+        <rect x="14" y="14" width="40" height="40" rx="8" fill="#DBEAFE" />
+        <circle cx="34" cy="34" r="8" fill="#2563EB" />
+
+        <!-- Title & Subtitle -->
+        <text x="66" y="30" class="font-fira" font-size="14" font-weight="700" fill="#1E40AF">
+          Blue Hydro Flask with University Stickers
+        </text>
+        <text x="66" y="48" class="font-fira" font-size="12" font-weight="500" fill="#64748B">
+          Reported Lost • Science Hall 2nd Floor • 2 days ago
+        </text>
+
+        <!-- Status Tag -->
+        <rect x="510" y="24" width="76" height="22" rx="11" fill="#FEF2F2" stroke="#FECACA" stroke-width="1" />
+        <text x="548" y="38" class="font-fira" font-size="11" font-weight="700" fill="#DC2626" text-anchor="middle">Lost Item</text>
+      </g>
+
+      <!-- Result 2: Found Match -->
+      <g transform="translate(0, 76)">
+        <rect x="0" y="0" width="600" height="68" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1" />
+        
+        <!-- Icon Bubble -->
+        <rect x="14" y="14" width="40" height="40" rx="8" fill="#DCFCE7" />
+        <circle cx="34" cy="34" r="8" fill="#16A34A" />
+
+        <!-- Title & Subtitle -->
+        <text x="66" y="30" class="font-fira" font-size="14" font-weight="600" fill="#0F172A">
+          Stainless Steel Water Bottle (Blue Cap)
+        </text>
+        <text x="66" y="48" class="font-fira" font-size="12" font-weight="500" fill="#64748B">
+          Found Item • Student Union Plaza • Handover Hub
+        </text>
+
+        <!-- Status Tag -->
+        <rect x="502" y="24" width="84" height="22" rx="11" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1" />
+        <text x="544" y="38" class="font-fira" font-size="11" font-weight="700" fill="#16A34A" text-anchor="middle">Found Item</text>
+      </g>
+
+      <!-- Result 3: AI Potential Match Recommendation -->
+      <g transform="translate(0, 152)">
+        <rect x="0" y="0" width="600" height="68" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1" />
+        
+        <!-- Icon Bubble -->
+        <rect x="14" y="14" width="40" height="40" rx="8" fill="#EEF2FF" />
+        <polygon points="34,26 36,32 42,34 36,36 34,42 32,36 26,34 32,32" fill="#6366F1" />
+
+        <!-- Title & Subtitle -->
+        <text x="66" y="30" class="font-fira" font-size="14" font-weight="600" fill="#0F172A">
+          AI Match: 92% Similarity with Found Bottle #402
+        </text>
+        <text x="66" y="48" class="font-fira" font-size="12" font-weight="500" fill="#64748B">
+          Visual CLIP + Color match verified by FindAI engine
+        </text>
+
+        <!-- Match Tag -->
+        <rect x="496" y="24" width="90" height="22" rx="11" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1" />
+        <text x="541" y="38" class="font-fira" font-size="11" font-weight="700" fill="#4F46E5" text-anchor="middle">92% Match</text>
+      </g>
+
+      <!-- Result 4: Quick Action Shortcut -->
+      <g transform="translate(0, 228)">
+        <rect x="0" y="0" width="600" height="54" rx="10" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" />
+        
+        <rect x="14" y="11" width="32" height="32" rx="6" fill="#E2E8F0" />
+        <line x1="24" y1="27" x2="36" y2="27" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+        <line x1="30" y1="21" x2="30" y2="33" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+
+        <text x="56" y="32" class="font-fira" font-size="13" font-weight="600" fill="#334155">
+          Report a new lost item named "Hydro Flask"
+        </text>
+        <text x="565" y="33" class="font-fira" font-size="14" font-weight="700" fill="#94A3B8">→</text>
+      </g>
+    </g>
+
+    <!-- Modal Footer Navigation Tips -->
+    <g transform="translate(24, 480)">
+      <line x1="-24" y1="0" x2="616" y2="0" stroke="#E2E8F0" stroke-width="1" />
+      <text x="0" y="24" class="font-fira" font-size="12" font-weight="500" fill="#94A3B8">
+        <tspan font-weight="700" fill="#64748B">↑↓</tspan> to navigate   <tspan font-weight="700" fill="#64748B">↵</tspan> to select   <tspan font-weight="700" fill="#64748B">ESC</tspan> to close
+      </text>
+      <text x="592" y="24" class="font-fira" font-size="11" font-weight="600" fill="#64748B" text-anchor="end">
+        FindAI Smart Search
+      </text>
+    </g>
+  </g>
+</svg>
+

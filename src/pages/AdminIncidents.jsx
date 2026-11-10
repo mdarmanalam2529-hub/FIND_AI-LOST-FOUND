@@ -221,7 +221,7 @@ export default function AdminIncidents() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: '1100px', margin: '2rem auto 4rem auto' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
       {/* Toast */}
       {successToast && (
         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999, background: '#10b981', color: '#fff', padding: '0.75rem 1.25rem', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>

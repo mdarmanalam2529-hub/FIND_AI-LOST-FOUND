@@ -77,6 +77,7 @@ export function evaluateDependencyOrder(sortedFiles) {
   const accountRecoveryIdx = getIndex('create_account_recovery_and_audit_logs');
   const handoverIncidentsIdx = getIndex('create_handover_incidents_and_verification');
   const updateRolesIdx = getIndex('update_student_activation_and_roles');
+  const communityReportsIdx = getIndex('create_community_item_reports');
 
   // Rule 1: items must exist before item_images_storage RLS policy references public.items
   if (itemsIdx !== -1 && storageIdx !== -1 && itemsIdx > storageIdx) {
@@ -140,6 +141,14 @@ export function evaluateDependencyOrder(sortedFiles) {
     });
   }
 
+  // Rule 8: items must exist before community_item_reports references public.items
+  if (itemsIdx !== -1 && communityReportsIdx !== -1 && itemsIdx > communityReportsIdx) {
+    violations.push({
+      rule: 'Items Table Before Community Item Reports',
+      issue: `Community reports migration "${sortedFiles[communityReportsIdx]}" references public.items but sorts before items creation "${sortedFiles[itemsIdx]}".`,
+    });
+  }
+
   return violations;
 }
 
@@ -153,7 +162,7 @@ const activeFiles = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql
 
 // 1. Verify every active migration has a unique 14-digit version prefix
 test('Every active migration file in supabase/migrations has a unique 14-digit version prefix', () => {
-  assert.equal(activeFiles.length, 10, 'Must contain exactly 10 active migration files');
+  assert.equal(activeFiles.length, 11, 'Must contain exactly 11 active migration files');
 
   const duplicates = detectDuplicateVersions(activeFiles);
   assert.equal(duplicates.length, 0, `Expected 0 duplicate versions, found: ${JSON.stringify(duplicates)}`);
@@ -173,7 +182,7 @@ test('Active migration filename sorting strictly preserves table dependency orde
   const violations = evaluateDependencyOrder(alphabeticallySorted);
   assert.equal(violations.length, 0, `Expected 0 dependency violations, found: ${JSON.stringify(violations)}`);
 
-  // Verify the exact expected 9-step sequence
+  // Verify the exact expected 11-step sequence
   const expectedSequence = [
     '20261018100000_create_items_table.sql',
     '20261018110000_create_item_images_storage.sql',
@@ -185,6 +194,7 @@ test('Active migration filename sorting strictly preserves table dependency orde
     '20261025120000_create_account_recovery_and_audit_logs.sql',
     '20261026100000_create_handover_incidents_and_verification.sql',
     '20261028130000_update_student_activation_and_roles.sql',
+    '20261101100000_create_community_item_reports.sql',
   ];
   assert.deepEqual(activeFiles, expectedSequence, 'Active migration files must match exact expected sequence');
 });

@@ -296,6 +296,15 @@ adminReportRouter.get('/', requireAdminOrReviewer, async (req, res) => {
         (a) => a.action === 'report_resolved_duplicate'
       );
 
+      // Community abuse reports
+      const communityReportAudits = associatedAudits.filter(
+        (a) => a.action === 'community_reported'
+      );
+      const flagsDismissedAudit = associatedAudits.find(
+        (a) => a.action === 'community_flags_dismissed'
+      );
+      const isCommunityReported = communityReportAudits.length > 0 && !flagsDismissedAudit;
+
       return {
         ...item,
         claims_count: associatedClaims.length,
@@ -309,6 +318,14 @@ adminReportRouter.get('/', requireAdminOrReviewer, async (req, res) => {
           is_reviewed: isReviewed,
           is_duplicate_resolved: Boolean(duplicateAudit),
           duplicate_of_id: duplicateAudit?.details?.duplicateOfId || null,
+          is_community_reported: isCommunityReported,
+          community_report_count: communityReportAudits.length,
+          community_reports: communityReportAudits.map((a) => ({
+            id: a.id,
+            reason: a.details?.reason || 'unspecified',
+            explanation: a.details?.explanation || a.reason,
+            reported_at: a.created_at,
+          })),
         },
         latest_audit: associatedAudits[0] || null,
       };
@@ -337,6 +354,8 @@ adminReportRouter.get('/', requireAdminOrReviewer, async (req, res) => {
         filtered = filtered.filter((i) => i.indicators.is_reviewed);
       } else if (indicatorFilter === 'needs_review') {
         filtered = filtered.filter((i) => !i.indicators.is_reviewed && i.status === 'open');
+      } else if (indicatorFilter === 'community_reported' || indicatorFilter === 'reported') {
+        filtered = filtered.filter((i) => i.indicators.is_community_reported);
       }
     }
 
@@ -619,6 +638,7 @@ adminReportRouter.patch('/:id/moderate', requireAdminOrReviewer, async (req, res
     'restrict',
     'restore',
     'resolve_duplicate',
+    'dismiss_community_flags',
   ];
 
   if (!validActions.includes(normalizedAction)) {
@@ -716,6 +736,22 @@ adminReportRouter.patch('/:id/moderate', requireAdminOrReviewer, async (req, res
       newStatus = 'closed';
       auditDetails.duplicateOfId = primaryReport.id;
       auditDetails.primaryReportTitle = primaryReport.title;
+    } else if (normalizedAction === 'dismiss_community_flags') {
+      // Dismiss pending community abuse reports for this listing
+      try {
+        await serviceSupabase
+          .from('community_item_reports')
+          .update({
+            status: 'dismissed',
+            reviewed_by: req.user.id,
+            reviewed_at: new Date().toISOString(),
+            admin_notes: reason,
+          })
+          .eq('item_id', currentItem.id)
+          .eq('status', 'pending');
+      } catch (dismissErr) {
+        console.warn('[Admin Moderation] dismiss_community_flags notice:', dismissErr.message);
+      }
     }
 
     // 3. Verify transition validity against schema

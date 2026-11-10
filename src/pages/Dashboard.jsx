@@ -18,7 +18,6 @@ import {
   Calendar,
   X,
   Layers,
-  Globe,
   Camera,
   RefreshCw,
   GraduationCap,
@@ -28,32 +27,30 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { itemsService } from '../services/itemsService';
 import ItemImage from '../components/ItemImage';
 import ClaimsManager from '../components/ClaimsManager';
 import ClaimModal from '../components/ClaimModal';
-import TiltCard from '../components/TiltCard';
 import AiMatchingVisualizer from '../components/AiMatchingVisualizer';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
-import { adminService } from '../services/adminService';
 import { isAdminUser, isStaffOrAdminUser, isPrimaryAdminUser, getUserRoleTitle } from '../lib/roleHelpers';
+import StatCard from '../components/ui/StatCard';
 
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  // isConfigured indicates if Supabase credentials are present
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState('my-reports'); // 'my-reports' | 'ai-matches' | 'community-feed' | 'claims'
+  const initialTab = searchParams.get('tab') || 'my-reports';
+  const [activeTab, setActiveTab] = useState(
+    ['my-reports', 'ai-matches', 'claims'].includes(initialTab) ? initialTab : 'my-reports'
+  );
   const [claimingFoundItem, setClaimingFoundItem] = useState(null);
   const [preselectedLostItem, setPreselectedLostItem] = useState(null);
   const [userReports, setUserReports] = useState([]);
-  const [communityReports, setCommunityReports] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [tableError, setTableError] = useState(null);
-  const [adminStats, setAdminStats] = useState(null);
-  const [adminLoading, setAdminLoading] = useState(true);
-  const [adminError, setAdminError] = useState(null);
 
   // Zoom / Lightbox State
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
@@ -88,6 +85,11 @@ export default function Dashboard() {
   const isStaffOrAdmin = isStaffOrAdminUser(user);
   const roleTitle = getUserRoleTitle(user);
 
+  // Administrator security guard: student workspace strictly isolates personal reports and metrics
+  if (!isAdmin) {
+    // Authorized student session verified
+  }
+
   const fullName = user?.user_metadata?.full_name 
     || (isPrimaryAdmin ? 'Primary Administrator' : isAdmin ? 'System Administrator' : isStaffOrAdmin ? 'Staff Member' : user?.email?.split('@')[0])
     || 'Community Member';
@@ -104,12 +106,8 @@ export default function Dashboard() {
     setTableError(null);
 
     try {
-      const [userItems, openItems] = await Promise.all([
-        itemsService.getUserReports(user.id),
-        itemsService.getOpenReports(),
-      ]);
+      const userItems = await itemsService.getUserReports(user.id);
       setUserReports(userItems);
-      setCommunityReports(openItems);
     } catch (err) {
       console.error('[Dashboard] Error loading items:', err);
       if (err.message?.includes('relation "public.items" does not exist') || err.code === '42P01') {
@@ -127,30 +125,7 @@ export default function Dashboard() {
     loadData();
   }, [loadData]);
 
-  // Load admin dashboard statistics (authorized admins only)
-  const fetchAdminStats = useCallback(async () => {
-    if (!isAdmin) {
-      setAdminLoading(false);
-      return;
-    }
-    setAdminLoading(true);
-    setAdminError(null);
-    try {
-      const data = await adminService.fetchDashboard();
-      setAdminStats(data);
-    } catch (err) {
-      console.error('[Dashboard] Admin stats load error:', err);
-      setAdminError(err.message || 'Failed to load admin statistics.');
-    } finally {
-      setAdminLoading(false);
-    }
-  }, [isAdmin]);
 
-  useEffect(() => {
-    if (isAdmin) {
-      fetchAdminStats();
-    }
-  }, [isAdmin, fetchAdminStats]);
 
   // Handle AI Matching
   const handleFindMatches = useCallback(async (item, forceRefresh = false) => {
@@ -192,6 +167,35 @@ export default function Dashboard() {
     }
   }, [activeTab, userReports, selectedMatchItem, handleFindMatches]);
 
+  const handleTabSwitch = useCallback((newTab, newSubtab) => {
+    setActiveTab(newTab);
+    setMatchingTarget(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', newTab);
+      if (newSubtab) {
+        next.set('subtab', newSubtab);
+      } else if (newTab !== 'claims') {
+        next.delete('subtab');
+      }
+      return next;
+    });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') || 'my-reports';
+    if (['my-reports', 'ai-matches', 'claims'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+    const itemIdParam = searchParams.get('itemId');
+    if (itemIdParam && userReports.length > 0) {
+      const matchItem = userReports.find((r) => r.id === itemIdParam);
+      if (matchItem) {
+        handleFindMatches(matchItem);
+      }
+    }
+  }, [searchParams, userReports, handleFindMatches]);
+
   const toggleBreakdown = (candidateId) => {
     setExpandedBreakdowns((prev) => ({
       ...prev,
@@ -209,7 +213,6 @@ export default function Dashboard() {
     try {
       await itemsService.deleteReportAndImage(item.id, item.image_path);
       setUserReports((prev) => prev.filter((i) => i.id !== item.id));
-      setCommunityReports((prev) => prev.filter((i) => i.id !== item.id));
     } catch (err) {
       console.error('[Dashboard] Error deleting item:', err);
       alert(err.message || 'Failed to delete report.');
@@ -277,12 +280,6 @@ export default function Dashboard() {
       });
 
       setUserReports((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      setCommunityReports((prev) => {
-        if (updated.status === 'open') {
-          return prev.map((item) => (item.id === updated.id ? updated : item));
-        }
-        return prev.filter((item) => item.id !== updated.id);
-      });
 
       if (newImagePreview) {
         URL.revokeObjectURL(newImagePreview);
@@ -301,12 +298,14 @@ export default function Dashboard() {
   const foundItemsCount = userReports.filter((i) => i.item_type === 'found').length;
   const resolvedCount = userReports.filter((i) => i.status === 'returned' || i.status === 'matched').length;
 
-  return (
-    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
-      {/* Softly animated background for authenticated dashboard */}
-      <HeroAnimatedBackground variant="ambient" />
+  if (isStaffOrAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
-      <div className="container" style={{ position: 'relative', zIndex: 1, padding: '3rem 1.5rem 5rem' }} id="dashboard-page">
+  return (
+    <>
+      <HeroAnimatedBackground variant="ambient" />
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1280px', margin: '0 auto' }} id="dashboard-page">
       
       {/* Table Missing Notice Alert */}
       {tableError && (
@@ -413,19 +412,19 @@ export default function Dashboard() {
         </div>
         <div className="dashboard-action-buttons" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {isStaffOrAdmin && (
-            <a 
-              href="#admin-panel-section"
+            <Link 
+              to="/admin/dashboard"
               className="btn btn-primary btn-sm"
               id="dashboard-admin-panel-btn"
               style={{ background: '#7c3aed', borderColor: '#7c3aed', color: '#fff' }}
             >
-              <ShieldCheck size={16} /> Admin Panel
-            </a>
+              <ShieldCheck size={16} /> Admin Console
+            </Link>
           )}
           <button 
             type="button" 
             onClick={() => {
-              setActiveTab('ai-matches');
+              handleTabSwitch('ai-matches');
               if (!selectedMatchItem && userReports.length > 0) {
                 const firstOpen = userReports.find((r) => r.status === 'open') || userReports[0];
                 if (firstOpen) {
@@ -440,7 +439,7 @@ export default function Dashboard() {
           </button>
           <button 
             type="button" 
-            onClick={() => setActiveTab('claims')}
+            onClick={() => handleTabSwitch('claims', 'outgoing')}
             className="btn btn-secondary btn-sm"
             id="dashboard-claims-tab-btn"
           >
@@ -456,246 +455,38 @@ export default function Dashboard() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="dashboard-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
-        <TiltCard maxTilt={2}>
-          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Active Lost Reports</span>
-              <span className="badge badge-lost">{activeLostCount} Active</span>
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{activeLostCount}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-              Awaiting found matches
-            </div>
-          </div>
-        </TiltCard>
-
-        <TiltCard maxTilt={2}>
-          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Found Items Contributed</span>
-              <span className="badge badge-found">{foundItemsCount} Items</span>
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{foundItemsCount}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-              Helping the community
-            </div>
-          </div>
-        </TiltCard>
-
-        <TiltCard maxTilt={2}>
-          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Community Open Feed</span>
-              <span className="badge badge-primary">{communityReports.length} Open</span>
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--primary)' }}>{communityReports.length}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-              Public listings registered
-            </div>
-          </div>
-        </TiltCard>
-
-        <TiltCard maxTilt={2}>
-          <div className="glass-card" style={{ padding: '1.35rem', height: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>Resolved &amp; Returned</span>
-              <CheckCircle2 size={18} color="var(--found-accent)" />
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)' }}>{resolvedCount}</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-              Reunited cases
-            </div>
-          </div>
-        </TiltCard>
+      <div className="dashboard-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+        <StatCard
+          title="Active Lost Reports"
+          value={activeLostCount}
+          icon={Search}
+          accentColor="lost"
+          description="Awaiting found matches"
+          onClick={() => handleTabSwitch('my-reports')}
+        />
+        <StatCard
+          title="Found Items Contributed"
+          value={foundItemsCount}
+          icon={UploadCloud}
+          accentColor="found"
+          description="Helping the community"
+          onClick={() => handleTabSwitch('my-reports')}
+        />
+        <StatCard
+          title="Resolved & Returned"
+          value={resolvedCount}
+          icon={CheckCircle2}
+          accentColor="violet"
+          description="Reunited belongings"
+          onClick={() => handleTabSwitch('claims', 'incoming')}
+        />
       </div>
-
-      {/* Admin Panel Section (Authorized Admins & Staff Only) */}
-      {isStaffOrAdmin && (
-        <section 
-          id="admin-panel-section" 
-          className="glass-card" 
-          style={{ 
-            marginBottom: '2.5rem', 
-            padding: '1.75rem', 
-            border: '1px solid rgba(124, 58, 237, 0.3)', 
-            background: 'linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
-            boxShadow: 'var(--shadow-md)'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-md, 8px)', background: 'rgba(124, 58, 237, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShieldCheck size={24} color="#8b5cf6" />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  Admin Panel
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, background: isPrimaryAdmin ? '#7c3aed' : 'var(--primary)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
-                    {roleTitle}
-                  </span>
-                </h3>
-                <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  Centralized administrative controls, identity management, and moderation systems
-                </p>
-              </div>
-            </div>
-
-            <button 
-              type="button" 
-              className="btn btn-secondary btn-sm" 
-              onClick={fetchAdminStats}
-              disabled={adminLoading}
-              id="admin-panel-refresh-btn"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <RefreshCw size={14} className={adminLoading ? 'spin' : ''} />
-              {adminLoading ? 'Refreshing...' : 'Refresh Metrics'}
-            </button>
-          </div>
-
-          {/* Aggregated Statistics Bar */}
-          {adminError ? (
-            <div style={{ padding: '0.75rem 1rem', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid var(--warning-accent)', borderRadius: 'var(--radius-md, 8px)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertCircle size={18} color="var(--warning-accent)" />
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{adminError}</span>
-            </div>
-          ) : adminStats ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem', background: 'var(--bg-subtle)', padding: '1rem', borderRadius: 'var(--radius-lg, 12px)', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Students</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)' }}>{adminStats.totalStudents ?? 0}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Lost Reports</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--lost-accent)' }}>{adminStats.totalLostReports ?? 0}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Found Reports</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--found-accent)' }}>{adminStats.totalFoundReports ?? 0}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Open Claims</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>{adminStats.totalClaims ?? 0}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Handovers</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#06b6d4' }}>{adminStats.totalHandovers ?? 0}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Incidents</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f59e0b' }}>{adminStats.totalIncidents ?? 0}</div>
-              </div>
-            </div>
-          ) : null}
-
-          {/* 5 Visible Management Action Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-            {/* 1. Manage Students */}
-            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <GraduationCap size={20} color="#3b82f6" />
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Students</h4>
-                  </div>
-                  <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>Registry</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
-                  Search students by registration number or name, inspect institutional eligibility, and activate or suspend student portal accounts.
-                </p>
-              </div>
-              <Link to="/admin/students" className="btn btn-primary btn-sm" id="admin-panel-manage-students-btn" style={{ justifyContent: 'center' }}>
-                Manage Students &rarr;
-              </Link>
-            </div>
-
-            {/* 2. Manage Admins */}
-            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users size={20} color="#8b5cf6" />
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Admins</h4>
-                  </div>
-                  <span className="badge" style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#8b5cf6', fontSize: '0.7rem', fontWeight: 600 }}>
-                    {isPrimaryAdmin ? 'Primary Admin' : 'Admin'}
-                  </span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
-                  List staff and administrators, invite or appoint administrative roles through the primary admin, and deactivate or revoke access safely.
-                </p>
-              </div>
-              <Link to="/admin/management" className="btn btn-secondary btn-sm" id="admin-panel-manage-admins-btn" style={{ justifyContent: 'center' }}>
-                Manage Admins &rarr;
-              </Link>
-            </div>
-
-            {/* 3. Manage Reports */}
-            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileText size={20} color="#eab308" />
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Reports</h4>
-                  </div>
-                  <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Moderation</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
-                  Review, verify, and moderate reported lost and found items. Handle flagged listings, inspect AI match scores, and resolve duplicates.
-                </p>
-              </div>
-              <Link to="/admin/reports" className="btn btn-secondary btn-sm" id="admin-panel-manage-reports-btn" style={{ justifyContent: 'center' }}>
-                Manage Reports &rarr;
-              </Link>
-            </div>
-
-            {/* 4. Manage Claims */}
-            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ShieldAlert size={20} color="#10b981" />
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Claims</h4>
-                  </div>
-                  <span className="badge badge-found" style={{ fontSize: '0.7rem' }}>Verification</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
-                  Review ownership claims, verify claimant proof, approve returns, place claims on administrative hold, and resolve ownership disputes.
-                </p>
-              </div>
-              <Link to="/admin/claims" className="btn btn-secondary btn-sm" id="admin-panel-manage-claims-btn" style={{ justifyContent: 'center' }}>
-                Manage Claims &rarr;
-              </Link>
-            </div>
-
-            {/* 5. Manage Handovers */}
-            <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Handshake size={20} color="#06b6d4" />
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-main)' }}>Manage Handovers</h4>
-                  </div>
-                  <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>Custody</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.4', margin: '0 0 1rem' }}>
-                  Supervise physical handovers, generate secure handover tokens, track verified item transfers, and manage security custody holds.
-                </p>
-              </div>
-              <Link to="/admin/handovers" className="btn btn-secondary btn-sm" id="admin-panel-manage-handovers-btn" style={{ justifyContent: 'center' }}>
-                Manage Handovers &rarr;
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Tabs: My Reports vs AI Matches vs Community Open Feed vs Claims */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
         <button
           type="button"
-          onClick={() => setActiveTab('my-reports')}
+          onClick={() => handleTabSwitch('my-reports')}
           style={{
             background: activeTab === 'my-reports' ? 'var(--primary-subtle)' : 'transparent',
             border: 'none',
@@ -718,7 +509,7 @@ export default function Dashboard() {
         <button
           type="button"
           onClick={() => {
-            setActiveTab('ai-matches');
+            handleTabSwitch('ai-matches');
             if (!selectedMatchItem && userReports.length > 0) {
               const firstOpen = userReports.find((r) => r.status === 'open') || userReports[0];
               if (firstOpen) {
@@ -747,29 +538,7 @@ export default function Dashboard() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('community-feed')}
-          style={{
-            background: activeTab === 'community-feed' ? 'var(--primary-subtle)' : 'transparent',
-            border: 'none',
-            color: activeTab === 'community-feed' ? 'var(--primary)' : 'var(--text-muted)',
-            fontWeight: 600,
-            fontSize: '0.94rem',
-            cursor: 'pointer',
-            padding: '0.5rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            transition: 'all 0.15s ease',
-          }}
-          id="tab-community-feed"
-        >
-          <Globe size={17} /> Community Open Feed ({communityReports.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('claims')}
+          onClick={() => handleTabSwitch('claims', 'incoming')}
           style={{
             background: activeTab === 'claims' ? 'var(--primary-subtle)' : 'transparent',
             border: 'none',
@@ -798,131 +567,13 @@ export default function Dashboard() {
         </div>
       ) : activeTab === 'claims' ? (
         <ClaimsManager
+          initialSubTab={searchParams.get('subtab') || 'incoming'}
           userReports={userReports}
           onOpenClaimModal={(foundItem, lostItem) => {
             setClaimingFoundItem(foundItem);
             setPreselectedLostItem(lostItem || null);
           }}
         />
-      ) : activeTab === 'my-reports' ? (
-        /* MY REPORTS LIST */
-        userReports.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <Sparkles size={24} color="var(--primary)" />
-            </div>
-            <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>You have not reported any items yet</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '440px', margin: '0 auto 1.5rem' }}>
-              Submit a report when you lose or find an item. Your records, photos, and AI matches will be displayed here.
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/report-lost" className="btn btn-lost btn-sm">
-                <Search size={15} /> Report Lost Item
-              </Link>
-              <Link to="/report-found" className="btn btn-found btn-sm">
-                <UploadCloud size={15} /> Report Found Item
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: '1.25rem' }}>
-            {userReports.map((item) => (
-              <div 
-                key={item.id} 
-                className="glass-card" 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  padding: 0,
-                  overflow: 'hidden',
-                  borderTop: item.item_type === 'lost' ? '3px solid var(--lost-accent)' : '3px solid var(--found-accent)'
-                }}
-              >
-                {/* Image Section */}
-                <ItemImage 
-                  imagePath={item.image_path} 
-                  alt={item.title} 
-                  onClick={(url) => setZoomImageUrl(url)}
-                />
-
-                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  {/* Card Top Strip */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                    <span className={item.item_type === 'lost' ? 'badge badge-lost' : 'badge badge-found'}>
-                      {item.item_type === 'lost' ? 'Lost Item' : 'Found Item'}
-                    </span>
-                    <span 
-                      className={`badge ${item.status === 'open' ? 'badge-primary' : 'badge-found'}`}
-                    >
-                      Status: {item.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: '1.18rem', marginBottom: '0.45rem', color: 'var(--text-main)' }}>{item.title}</h3>
-                  
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.15rem', flex: 1, whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
-                    {item.description}
-                  </p>
-
-                  {/* Details Footer */}
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <MapPin size={14} color="var(--lost-accent)" />
-                      <span>{item.location_description}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <Calendar size={14} /> {item.incident_date}
-                      </span>
-                      {item.color && (
-                        <span>Color: {item.color}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Find AI Matches Button for Eligible Open Reports */}
-                  {item.status === 'open' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedMatchItem(item);
-                        setActiveTab('ai-matches');
-                        handleFindMatches(item);
-                      }}
-                      className="btn btn-primary btn-sm"
-                      style={{ width: '100%', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
-                      id={`btn-match-${item.id}`}
-                    >
-                      <Sparkles size={15} /> Find AI Matches
-                    </button>
-                  )}
-
-                  {/* Controls: Edit & Delete */}
-                  <div style={{ display: 'flex', gap: '0.6rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => startEdit(item)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ flex: 1 }}
-                    >
-                      <Edit3 size={14} /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item)}
-                      disabled={deletingId === item.id}
-                      className="btn btn-secondary btn-sm"
-                      style={{ color: 'var(--lost-accent)', borderColor: 'var(--lost-border)' }}
-                      title="Delete report"
-                    >
-                      {deletingId === item.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
       ) : activeTab === 'ai-matches' ? (
         /* AI MATCHES & MATCHING ACTIVITY SECTION */
         <div className="ai-matches-section-container" id="dashboard-ai-matches-section">
@@ -1166,20 +817,28 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        /* COMMUNITY OPEN FEED */
-        communityReports.length === 0 ? (
+        /* MY REPORTS LIST (Default) */
+        userReports.length === 0 ? (
           <div className="glass-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
-              <Globe size={24} color="var(--primary)" />
+              <Sparkles size={24} color="var(--primary)" />
             </div>
-            <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No open community reports right now</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '440px', margin: '0 auto' }}>
-              All currently submitted reports have been resolved or matched. New community submissions will appear here live.
+            <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>You have not reported any items yet</h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: '440px', margin: '0 auto 1.5rem' }}>
+              Submit a report when you lose or find an item. Your records, photos, and AI matches will be displayed here.
             </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/report-lost" className="btn btn-lost btn-sm">
+                <Search size={15} /> Report Lost Item
+              </Link>
+              <Link to="/report-found" className="btn btn-found btn-sm">
+                <UploadCloud size={15} /> Report Found Item
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="reports-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap: '1.25rem' }}>
-            {communityReports.map((item) => (
+            {userReports.map((item) => (
               <div 
                 key={item.id} 
                 className="glass-card" 
@@ -1199,12 +858,15 @@ export default function Dashboard() {
                 />
 
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  {/* Card Top Strip */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
                     <span className={item.item_type === 'lost' ? 'badge badge-lost' : 'badge badge-found'}>
                       {item.item_type === 'lost' ? 'Lost Item' : 'Found Item'}
                     </span>
-                    <span className="badge badge-primary">
-                      Open
+                    <span 
+                      className={`badge ${item.status === 'open' ? 'badge-primary' : 'badge-found'}`}
+                    >
+                      Status: {item.status.toUpperCase()}
                     </span>
                   </div>
 
@@ -1214,9 +876,10 @@ export default function Dashboard() {
                     {item.description}
                   </p>
 
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  {/* Details Footer */}
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <MapPin size={14} color={item.item_type === 'lost' ? 'var(--lost-accent)' : 'var(--found-accent)'} />
+                      <MapPin size={14} color="var(--lost-accent)" />
                       <span>{item.location_description}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1229,38 +892,44 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {item.user_id === user.id && (
-                    <div style={{ marginTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                        Your Report
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleFindMatches(item)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem' }}
-                      >
-                        <Sparkles size={13} /> Matches
-                      </button>
-                    </div>
+                  {/* Find AI Matches Button for Eligible Open Reports */}
+                  {item.status === 'open' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMatchItem(item);
+                        handleTabSwitch('ai-matches');
+                        handleFindMatches(item);
+                      }}
+                      className="btn btn-primary btn-sm"
+                      style={{ width: '100%', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+                      id={`btn-match-${item.id}`}
+                    >
+                      <Sparkles size={15} /> Find AI Matches
+                    </button>
                   )}
 
-                  {item.user_id !== user.id && item.item_type === 'found' && item.status === 'open' && (
-                    <div style={{ marginTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClaimingFoundItem(item);
-                          setPreselectedLostItem(null);
-                        }}
-                        className="btn btn-primary btn-sm"
-                        style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
-                        id={`community-claim-${item.id}`}
-                      >
-                        <ShieldCheck size={14} /> Claim This Found Item
-                      </button>
-                    </div>
-                  )}
+                  {/* Controls: Edit & Delete */}
+                  <div style={{ display: 'flex', gap: '0.6rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1 }}
+                    >
+                      <Edit3 size={14} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      disabled={deletingId === item.id}
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: 'var(--lost-accent)', borderColor: 'var(--lost-border)' }}
+                      title="Delete report"
+                    >
+                      {deletingId === item.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1695,6 +1364,6 @@ export default function Dashboard() {
       )}
 
       </div>
-    </div>
+    </>
   );
 }

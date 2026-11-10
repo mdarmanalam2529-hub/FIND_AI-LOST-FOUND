@@ -247,8 +247,7 @@ export default function AdminClaims() {
   ];
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
-      <div className="container" style={{ padding: '2.5rem 1.5rem 4rem' }} id="admin-claims-page">
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }} id="admin-claims-page">
         {/* Header Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -344,6 +343,5 @@ export default function AdminClaims() {
           {renderTable(currentDisplayList)}
         </div>
       </div>
-    </div>
   );
 }

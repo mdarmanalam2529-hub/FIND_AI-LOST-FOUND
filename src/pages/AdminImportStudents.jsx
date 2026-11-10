@@ -295,7 +295,7 @@ export default function AdminImportStudents() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: '1000px', margin: '2rem auto 4rem auto' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>

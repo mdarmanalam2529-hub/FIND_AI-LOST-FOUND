@@ -312,7 +312,7 @@ export default function HeroAnimatedBackground({
             justifyContent: 'center',
           }}
         >
-          <AiOrb3D size={460} showBadge={false} interactive={false} />
+          <AiOrb3D size={460} showBadge={false} showTitle={false} interactive={false} />
         </div>
       )}
 

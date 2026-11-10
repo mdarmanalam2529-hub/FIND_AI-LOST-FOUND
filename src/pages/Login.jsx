@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, Lock, Eye, EyeOff, AlertCircle, Loader2, GraduationCap, Mail, Shield } from 'lucide-react';
+import { isStaffOrAdminUser } from '../lib/roleHelpers';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function Login() {
@@ -24,7 +25,9 @@ export default function Login() {
   // Auto-redirect if already authenticated
   useEffect(() => {
     if (user && !authLoading) {
-      const destination = location.state?.from?.pathname || '/dashboard';
+      const isStaffOrAdmin = isStaffOrAdminUser(user);
+      const defaultDest = isStaffOrAdmin ? '/admin/dashboard' : '/dashboard';
+      const destination = location.state?.from?.pathname || defaultDest;
       navigate(destination, { replace: true });
     }
   }, [user, authLoading, navigate, location]);
@@ -110,8 +113,10 @@ export default function Login() {
         });
       }
 
-      // Redirect to intended route or dashboard
-      const destination = location.state?.from?.pathname || '/dashboard';
+      // Redirect to intended route or admin/student dashboard
+      const isStaffOrAdmin = loginMode === 'staff' || isStaffOrAdminUser(user);
+      const defaultDest = isStaffOrAdmin ? '/admin/dashboard' : '/dashboard';
+      const destination = location.state?.from?.pathname || defaultDest;
       navigate(destination, { replace: true });
     } catch (err) {
       setServerError(err.message || 'An error occurred during sign in.');
@@ -124,7 +129,7 @@ export default function Login() {
     <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 140px)' }}>
       <HeroAnimatedBackground variant="ambient" />
       <div className="container" style={{ position: 'relative', zIndex: 1, padding: '4rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
-        <div className="glass-card form-entrance auth-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'rgba(255, 255, 255, 0.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="glass-card form-entrance auth-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', background: 'var(--bg-surface-translucent)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-subtle)' }}>
         
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -168,7 +173,7 @@ export default function Login() {
               padding: '0.65rem 0.75rem',
               borderRadius: 'var(--radius-md, 8px)',
               border: 'none',
-              background: loginMode === 'student' ? '#ffffff' : 'transparent',
+              background: loginMode === 'student' ? 'var(--bg-surface)' : 'transparent',
               color: loginMode === 'student' ? 'var(--primary, #2563eb)' : 'var(--text-muted, #64748b)',
               fontWeight: loginMode === 'student' ? 600 : 500,
               fontSize: '0.88rem',
@@ -195,7 +200,7 @@ export default function Login() {
               padding: '0.65rem 0.75rem',
               borderRadius: 'var(--radius-md, 8px)',
               border: 'none',
-              background: loginMode === 'staff' ? '#ffffff' : 'transparent',
+              background: loginMode === 'staff' ? 'var(--bg-surface)' : 'transparent',
               color: loginMode === 'staff' ? 'var(--primary, #2563eb)' : 'var(--text-muted, #64748b)',
               fontWeight: loginMode === 'staff' ? 600 : 500,
               fontSize: '0.88rem',

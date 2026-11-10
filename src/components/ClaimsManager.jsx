@@ -22,8 +22,8 @@ import {
   Info
 } from 'lucide-react';
 
-export default function ClaimsManager() {
-  const [subTab, setSubTab] = useState('incoming'); // 'incoming' | 'outgoing' | 'admin'
+export default function ClaimsManager({ initialSubTab }) {
+  const [subTab, setSubTab] = useState(initialSubTab || 'incoming'); // 'incoming' | 'outgoing' | 'admin'
   const [claimsData, setClaimsData] = useState({ outgoing: [], incoming: [], adminQueue: [], allClaims: [], isAdmin: false });
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -67,9 +67,19 @@ export default function ClaimsManager() {
     loadClaims();
   }, [loadClaims]);
 
+  useEffect(() => {
+    if (initialSubTab && ['incoming', 'outgoing', 'admin'].includes(initialSubTab)) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
   const handleReviewAction = async (claimId, action) => {
     let reason = '';
-    if (action === 'reject' || action === 'admin_reject') {
+    if (action === 'cancel') {
+      const confirmCancel = window.confirm('Are you sure you want to cancel this claim? This will withdraw your claim on this item.');
+      if (!confirmCancel) return;
+      reason = 'Cancelled by claimant';
+    } else if (action === 'reject' || action === 'admin_reject') {
       reason = window.prompt('Please provide a mandatory reason for rejecting this claim:') || '';
       if (!reason.trim()) return;
     } else if (action === 'admin_dispute') {
@@ -354,9 +364,10 @@ export default function ClaimsManager() {
           type="button"
           onClick={loadClaims}
           disabled={loading}
-          style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.4rem 0.75rem', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 500 }}
+          style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.4rem 0.75rem', color: 'var(--primary)', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 500 }}
+          id="claims-refresh-btn"
         >
-          <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
+          <RefreshCw size={13} className={loading ? 'spin' : ''} /> {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 

@@ -161,7 +161,7 @@ export default function AdminUserManagement() {
   const activeCount = users.filter((u) => u.isActive).length;
 
   return (
-    <div className="container" style={{ padding: '2.5rem 1.5rem', maxWidth: '1200px' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
       {/* Toast Notification */}
       {successToast && (
         <div

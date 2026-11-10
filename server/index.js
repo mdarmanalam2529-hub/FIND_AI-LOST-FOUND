@@ -12,6 +12,7 @@ import { adminIncidentRouter } from './incidentRoutes.js';
 import { adminReportRouter } from './adminReportRoutes.js';
 import { adminHandoverRouter } from './adminHandoverRoutes.js';
 import { adminUserRouter } from './adminUserRoutes.js';
+import { communityRouter } from './communityRoutes.js';
 
 import { loadAndValidateEnvironment } from './envConfig.js';
 
@@ -378,6 +379,13 @@ app.use('/api/admin/users', authenticateUser, rateLimiter, (req, res, next) => {
   req.anonSupabase = anonSupabase;
   next();
 }, adminUserRouter);
+
+// Mount Campus Community Feed & Abuse Reporting routes (authenticated students & campus members)
+app.use('/api/community', authenticateUser, rateLimiter, (req, res, next) => {
+  req.serviceSupabase = serviceSupabase;
+  req.anonSupabase = anonSupabase;
+  next();
+}, communityRouter);
 
 // Mount Hybrid Claim & Return System routes (protected by authentication & rate limiting)
 app.use('/api', authenticateUser, rateLimiter, claimRoutes);

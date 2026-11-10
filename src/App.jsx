@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
-import AdminClaims from './pages/AdminClaims';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import PublicLayout from './layouts/PublicLayout';
+import StudentLayout from './layouts/StudentLayout';
+import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/Home';
 import ReportLost from './pages/ReportLost';
 import ReportFound from './pages/ReportFound';
@@ -15,12 +16,15 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
-import AdminImportStudents from './pages/AdminImportStudents';
-import AdminStudentManagement from './pages/AdminStudentManagement';
-import AdminIncidents from './pages/AdminIncidents';
+import Community from './pages/Community';
+import AdminDashboard from './pages/AdminDashboard';
 import AdminReports from './pages/AdminReports';
+import AdminClaims from './pages/AdminClaims';
 import AdminHandovers from './pages/AdminHandovers';
+import AdminIncidents from './pages/AdminIncidents';
+import AdminStudentManagement from './pages/AdminStudentManagement';
 import AdminUserManagement from './pages/AdminUserManagement';
+import AdminImportStudents from './pages/AdminImportStudents';
 import './App.css';
 
 // 404 Fallback View
@@ -41,30 +45,20 @@ function NotFound() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app-wrapper">
-          <Navbar />
-          <div className="main-content">
-            <Routes>
-              {/* Public Routes */}
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Public Layout Hierarchy */}
+            <Route element={<PublicLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/report-lost" element={<ReportLost />} />
               <Route path="/report-found" element={<ReportFound />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
+              <Route path="/register" element={<SignUp />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-
-              {/* Protected Routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
               <Route
                 path="/change-password"
                 element={
@@ -73,86 +67,73 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <AdminRoute>
-                    <Dashboard />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/management"
-                element={
-                  <AdminRoute requireAdminRole={true}>
-                    <AdminUserManagement />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/users"
-                element={
-                  <AdminRoute requireAdminRole={true}>
-                    <AdminUserManagement />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/import-students"
-                element={
-                  <AdminRoute requireAdminRole={true}>
-                    <AdminImportStudents />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/incidents"
-                element={
-                  <AdminRoute>
-                    <AdminIncidents />
-                  </AdminRoute>
-                }
-              />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+
+            {/* Student Workspace Layout Hierarchy */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<StudentLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/student" element={<Dashboard />} />
+                <Route path="/student/dashboard" element={<Dashboard />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/student/community" element={<Community />} />
+              </Route>
+            </Route>
+
+            {/* Admin Workspace Layout Hierarchy */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="claims" element={<AdminClaims />} />
+                <Route path="handovers" element={<AdminHandovers />} />
                 <Route
-                  path="/admin/reports"
+                  path="incidents"
                   element={
                     <AdminRoute>
-                      <AdminReports />
+                      <AdminIncidents />
                     </AdminRoute>
                   }
                 />
                 <Route
-                  path="/admin/handovers"
-                  element={
-                    <AdminRoute>
-                      <AdminHandovers />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/claims"
-                  element={
-                    <AdminRoute>
-                      <AdminClaims />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/students"
+                  path="students"
                   element={
                     <AdminRoute requireAdminRole={true}>
                       <AdminStudentManagement />
                     </AdminRoute>
                   }
                 />
-
-              {/* 404 Catch-All */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-          <Footer />
-        </div>
-      </Router>
-    </AuthProvider>
+                <Route
+                  path="management"
+                  element={
+                    <AdminRoute requireAdminRole={true}>
+                      <AdminUserManagement />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="users"
+                  element={
+                    <AdminRoute requireAdminRole={true}>
+                      <AdminUserManagement />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="import-students"
+                  element={
+                    <AdminRoute requireAdminRole={true}>
+                      <AdminImportStudents />
+                    </AdminRoute>
+                  }
+                />
+              </Route>
+            </Route>
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

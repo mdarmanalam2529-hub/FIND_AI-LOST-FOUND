@@ -11,6 +11,9 @@ export default function AiOrb3D({
   className = '',
   showBadge = true,
   interactive = true,
+  showTitle = true,
+  title = 'FindAI Neural Core',
+  subtitle = 'AI-Powered Lost & Found Matching Engine',
   style = {},
 }) {
   const canvasRef = useRef(null);
@@ -388,97 +391,159 @@ export default function AiOrb3D({
 
   return (
     <div
-      ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className={`ai-orb-container ${className}`}
+      className={`ai-orb-wrapper ${className}`}
       style={{
         position: 'relative',
         width: '100%',
         maxWidth: `${size}px`,
-        aspectRatio: '1 / 1',
         margin: '0 auto',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         userSelect: 'none',
         ...style,
       }}
-      aria-label="3D AI Holographic Neural Engine Orb"
-      role="img"
+      aria-label="FindAI Neural Core - AI-Powered Lost & Found Matching Engine"
     >
-      {/* Background Soft Glow Aura */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: '12%',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, rgba(37, 99, 235, 0.12) 45%, transparent 70%)',
-          filter: 'blur(32px)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
-
-      {/* Main 3D Canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          display: 'block',
-          position: 'relative',
-          zIndex: 1,
-          maxWidth: '100%',
-          height: 'auto',
-          filter: 'drop-shadow(0 0 25px rgba(34, 211, 238, 0.35))',
-        }}
-      />
-
-      {/* Holographic Center Lens Ring Badge - Frosted White with Cyan Accent */}
-      {showBadge && (
+      {/* Prominent AI Name & Subtitle Heading Section */}
+      {showTitle && (
         <div
-          className="holographic-center-badge"
+          className="ai-neural-core-header"
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 2,
-            pointerEvents: 'none',
-            padding: '0.35rem 0.75rem',
-            borderRadius: '9999px',
-            background: 'rgba(255, 255, 255, 0.94)',
-            border: '1px solid #BFDBFE',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 2px 10px rgba(37, 99, 235, 0.12), 0 0 14px rgba(34, 211, 238, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
+            textAlign: 'center',
+            marginBottom: '0.85rem',
+            width: '100%',
+            zIndex: 3,
+            padding: '0 0.5rem',
           }}
         >
-          <span
+          <h3
+            className="ai-neural-core-title"
             style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: '#22d3ee',
-              boxShadow: '0 0 8px #22d3ee',
-              display: 'inline-block',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: '#0F172A',
+              fontFamily: 'var(--font-heading, "Inter", -apple-system, sans-serif)',
+              fontSize: 'clamp(1.25rem, 3.2vw, 1.55rem)',
+              fontWeight: 800,
+              letterSpacing: '-0.025em',
+              color: 'var(--text-main, #0F172A)',
+              margin: '0 0 0.35rem',
+              lineHeight: 1.25,
             }}
           >
-            Neural Core Active
-          </span>
+            {title === 'FindAI Neural Core' ? (
+              <>
+                Find<span className="gradient-text">AI</span> Neural Core
+              </>
+            ) : (
+              title
+            )}
+          </h3>
+          <p
+            className="ai-neural-core-subtitle"
+            style={{
+              margin: 0,
+              fontSize: 'clamp(0.78rem, 2vw, 0.88rem)',
+              color: 'var(--text-muted, #64748B)',
+              fontWeight: 500,
+              letterSpacing: '0.01em',
+              lineHeight: 1.4,
+            }}
+          >
+            {subtitle}
+          </p>
         </div>
       )}
+
+      {/* 3D Neural Visualization Stage */}
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="ai-orb-container"
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '1 / 1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        role="img"
+        aria-label="3D AI Holographic Neural Engine Orb"
+      >
+        {/* Background Soft Glow Aura */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: '12%',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, rgba(37, 99, 235, 0.12) 45%, transparent 70%)',
+            filter: 'blur(32px)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+
+        {/* Main 3D Canvas */}
+        <canvas
+          ref={canvasRef}
+          style={{
+            display: 'block',
+            position: 'relative',
+            zIndex: 1,
+            maxWidth: '100%',
+            height: 'auto',
+            filter: 'drop-shadow(0 0 25px rgba(34, 211, 238, 0.35))',
+          }}
+        />
+
+        {/* Holographic Center Lens Ring Badge - Frosted White with Cyan Accent */}
+        {showBadge && (
+          <div
+            className="holographic-center-badge"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 2,
+              pointerEvents: 'none',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '9999px',
+              background: 'rgba(255, 255, 255, 0.94)',
+              border: '1px solid #BFDBFE',
+              backdropFilter: 'blur(8px)',
+              boxShadow: '0 2px 10px rgba(37, 99, 235, 0.12), 0 0 14px rgba(34, 211, 238, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: '#22d3ee',
+                boxShadow: '0 0 8px #22d3ee',
+                display: 'inline-block',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: '#0F172A',
+              }}
+            >
+              Neural Core Active
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
