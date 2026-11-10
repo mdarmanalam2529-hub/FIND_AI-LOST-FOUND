@@ -216,6 +216,7 @@ export function loadAndValidateEnvironment(options = {}) {
 
     const anonKey =
       devVars.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      devVars.SUPABASE_PUBLISHABLE_KEY ||
       devVars.VITE_SUPABASE_ANON_KEY ||
       devVars.SUPABASE_ANON_KEY;
     if (!anonKey) {
@@ -224,7 +225,7 @@ export function loadAndValidateEnvironment(options = {}) {
       );
     }
 
-    if (!devVars.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!devVars.SUPABASE_SERVICE_ROLE_KEY && !devVars.SERVICE_ROLE_KEY) {
       throw new Error(
         `[Security Error] Incomplete credentials in ${localEnvFile}: missing SUPABASE_SERVICE_ROLE_KEY. Silent fallback to production .env is strictly blocked.`
       );
@@ -279,13 +280,14 @@ export function loadAndValidateEnvironment(options = {}) {
     const url = extractSupabaseUrl(prodVars);
     const anonKey =
       prodVars.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      prodVars.SUPABASE_PUBLISHABLE_KEY ||
       prodVars.VITE_SUPABASE_ANON_KEY ||
       prodVars.SUPABASE_ANON_KEY;
-    const serviceRole = prodVars.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRole = prodVars.SUPABASE_SERVICE_ROLE_KEY || prodVars.SERVICE_ROLE_KEY;
 
     if (!url || !anonKey || !serviceRole) {
       throw new Error(
-        `[Security Error] Incomplete production credentials in ${prodEnvFile}: missing required Supabase configuration.`
+        `[Security Error] Incomplete production credentials: missing required Supabase configuration (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY/ANON_KEY, SUPABASE_SERVICE_ROLE_KEY).`
       );
     }
 
