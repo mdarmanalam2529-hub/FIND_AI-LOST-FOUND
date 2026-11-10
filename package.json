@@ -1,19 +1,24 @@
 {
-  "name": "lost-find-finder",
+  "name": "findai",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite --host",
-    "server": "node server/index.js",
-    "start": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
+    "dev": "npm --prefix frontend run dev",
+    "server": "npm --prefix backend start",
     "dev:all": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
-    "start:prod": "npm run build && node server/index.js",
-    "test:server": "node server/testMigrationValidation.js && node server/testEnvConfig.js && node server/testSuspiciousHandover.js && node server/testStudentRegistryWorkflow.js && node server/testSimplifiedStudentAuth.js && node server/testFinalAuthRequirements.js && node server/testClaimWorkflow.js && node server/testReportModeration.js && node server/testCommunityWorkflow.js && node server/testHandoverManagement.js && node server/testEndToEndStudentWorkflow.js && node server/testLoginAuthDiagnostics.js && node server/testSecurityAudit.js && node server/testMetrics.js && node server/testClipMatcher.js && node server/testImageMatchingIntegration.js && node server/testAiMatcher.js",
-    "evaluate:ai": "node server/evaluate.js",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "start": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
+    "build": "npm --prefix frontend run build",
+    "start:prod": "npm run build && npm --prefix backend start",
+    "test": "npm --prefix backend test",
+    "test:server": "npm --prefix backend test",
+    "evaluate:ai": "npm --prefix backend run evaluate:ai",
+    "lint": "npx oxlint frontend/src",
+    "preview": "npm --prefix frontend run preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

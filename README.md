@@ -1,121 +1,114 @@
-# FindAI • Intelligent Lost & Found Matcher
+# FindAI • University Lost & Found Platform
 
-An AI-powered Lost and Found platform built with React, Vite, Supabase PostgreSQL, and local semantic text embeddings (`all-MiniLM-L6-v2`).
+An intelligent, AI-powered university lost-and-found matching platform featuring local multimodal embeddings (text via `all-MiniLM-L6-v2` and vision via `CLIP ViT-B/32`), student registry verification, secure claim verification with dual-party confirmation, and comprehensive administrative moderation.
 
 ---
 
-## Architecture Overview
+## Project Structure
+
+The project is organized into clean, dedicated directories:
 
 ```text
-[Frontend: React + Vite]  (Port 5173)
-           │
-           │  (Vite Proxy: /api/* -> http://localhost:3001)
-           ▼
-[Backend: Node.js Express] (Port 3001)
-           ├── Bearer Token Verification via Supabase Auth
-           ├── PostgreSQL queries scoped to user RLS (public.items)
-           ├── Local all-MiniLM-L6-v2 Semantic Embeddings
-           └── Multi-Factor Fusion Ranking (Text, Category, Color, Date, Location)
+FindAI/
+│
+├── frontend/                     # Modern React 19 + Vite Frontend SPA
+│   ├── public/                   # Static assets & icons
+│   ├── src/
+│   │   ├── assets/               # Visual media & branding assets
+│   │   ├── components/           # Reusable UI components (Modals, Dropdowns, Badges)
+│   │   │   └── ui/               # Core atomic design system primitives
+│   │   ├── context/              # React Context providers (AuthContext)
+│   │   ├── hooks/                # Custom hooks (useDebounce, useAutoRefresh)
+│   │   ├── layouts/              # Dashboard & navigation layouts (AdminLayout, StudentLayout)
+│   │   ├── lib/                  # Client utility libraries & Supabase client
+│   │   ├── pages/                # Application views (Student, Admin, Community, Auth)
+│   │   ├── services/             # Frontend API service layer (claims, reports, incidents)
+│   │   └── styles/               # Global styling & Tailwind directives (App.css, index.css)
+│   ├── index.html                # Frontend HTML entry point
+│   ├── package.json              # Frontend package configuration
+│   └── vite.config.js            # Vite configuration with proxy and credential protection
+│
+├── backend/                      # Node.js Express API & AI Matching Engine
+│   ├── ai/                       # Multimodal AI matching subsystem
+│   │   ├── textMatcher/          # Semantic text embeddings & multi-factor fusion
+│   │   ├── imageMatcher/         # CLIP ViT-B/32 visual embeddings & cosine similarity
+│   │   ├── metrics.js            # Information retrieval metrics (P@K, R@K, MRR)
+│   │   ├── evaluate.js           # Comparative evaluation benchmark harness
+│   │   └── benchmarkDataset.js   # Controlled evaluation dataset
+│   ├── src/
+│   │   ├── config/               # Environment validation & hardening (envConfig.js)
+│   │   ├── middleware/           # Authentication, role verification, & rate limiting
+│   │   ├── routes/               # API route definitions (admin, student, claims, community)
+│   │   └── services/             # Core business logic (claims, validation, handovers)
+│   ├── tests/                    # 17 automated test suites (zero regressions)
+│   ├── index.js                  # Express backend entry point
+│   └── package.json              # Backend package configuration
+│
+├── supabase/                     # Supabase database & infrastructure
+│   ├── migrations/               # Chronological PostgreSQL schema migrations
+│   ├── drafts/                   # Archived draft migrations
+│   └── config.toml               # Local Supabase configuration
+│
+├── scripts/                      # Operational administration & data maintenance scripts
+│   ├── activateRegisteredStudents.js
+│   ├── inspectStudents.js
+│   └── updateAdminUserRole.js
+│
+├── docs/                         # Project documentation, designs, & specifications
+│   ├── design/                   # UI design review & architecture specifications
+│   └── design-references/        # Wireframes and high-fidelity mockups
+│
+├── .gitignore                    # Git ignore rules (protecting .env, credentials, student CSVs)
+├── package.json                  # Root npm workspace configuration & orchestration scripts
+└── README.md                     # Project documentation
 ```
 
 ---
 
-## Required Environment Variables
+## Quick Start & Development
 
-Create a local `.env` file in the project root (never commit to Git; see `.env.example`):
+### 1. Prerequisites
+- Node.js >= 18.0.0
+- npm >= 9.0.0
 
+### 2. Environment Setup
+Copy the development environment template:
+```bash
+cp .env.local.example .env.local
+```
+Provide your local/development Supabase credentials in `.env.local`:
 ```env
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
-> **Security Note:** Never add `service_role` keys, database passwords, or privileged secrets to frontend or environment files. The backend verifies identities and queries Postgres using user-scoped Bearer tokens.
+> **Security Note:** Service-role keys and database secrets are strictly backend-only. The frontend Vite configuration and runtime guards explicitly block any `VITE_` variables containing service keys.
 
----
-
-## Installation & Setup
-
-1. **Install Dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Database Migrations:**
-   Run the migration scripts in your **Supabase Dashboard -> SQL Editor** in sequential order:
-   - `supabase/migrations/20261018100000_create_items_table.sql` (Items schema & base RLS)
-   - `supabase/migrations/20261018110000_create_item_images_storage.sql` (Private storage bucket)
-   - `supabase/migrations/20261019100000_create_hybrid_claims_system.sql` (Claims & handovers)
-   - `supabase/migrations/20261019110000_add_admin_and_update_policies.sql` (Admin policies)
-   - `supabase/migrations/20261023100000_harden_claim_and_admin_authorization.sql` (Authorization hardening)
-   - `supabase/migrations/20261025100000_harden_foreign_key_preservation.sql` (FK preservation)
-   - `supabase/migrations/20261025110000_create_student_registry_and_profiles.sql` (Student registry & profiles)
-   - `supabase/migrations/20261025120000_create_account_recovery_and_audit_logs.sql` (Account recovery & audit)
-   - `supabase/migrations/20261026100000_create_handover_incidents_and_verification.sql` (Handover holds & incidents)
-
----
-
-## Running the Application
-
-### 1. Combined Run (Backend + Frontend together)
-Run both the AI Express API and the Vite React frontend concurrently with a single command:
+### 3. Install Dependencies
+Install all workspace dependencies from root:
 ```bash
-npm start
-# or: npm run dev:all
-```
-* **Frontend**: `http://localhost:5173` (with Vite HMR)
-* **Backend API**: `http://localhost:3001` (with `/api` proxied from `http://localhost:5173/api`)
-
----
-
-### Separate Services (Optional)
-If you prefer running them in separate terminals:
-
-1. **Start the AI Matching Service (Backend):**
-   ```bash
-   npm run server
-   ```
-2. **Start the Frontend (Vite):**
-   ```bash
-   npm run dev
-   ```
-
----
-
-## Running Automated Tests
-
-Run the full AI Matching and API test suite:
-
-```bash
-# 1. Run AI Semantic Matcher unit & scoring logic tests:
-node server/testAiMatcher.js
-
-# 2. Run HTTP API security & endpoint verification tests:
-node server/testApiEndpoints.js
+npm install
 ```
 
+### 4. Running the Application
+
+| Command | Description |
+| :--- | :--- |
+| `npm start` or `npm run dev:all` | Runs backend API (Port 3001) and frontend (Port 5173) concurrently |
+| `npm run dev` | Runs the Vite frontend development server with HMR |
+| `npm run server` | Starts the Express AI matching backend |
+| `npm run build` | Builds the frontend for production into `frontend/dist` |
+| `npm run start:prod` | Builds the frontend and starts the backend in production mode |
+| `npm test` | Runs all 17 automated backend, security, and AI test suites |
+| `npm run evaluate:ai` | Runs the comparative AI matching benchmark suite |
+| `npm run lint` | Runs the fast Oxlint code verification on `frontend/src` |
+
 ---
 
-## API Endpoints
+## Security & Verification Architecture
 
-### `GET /api/health`
-Checks backend and model readiness.
-* **Response:**
-  ```json
-  {
-    "status": "ok",
-    "service": "FindAI Semantic Matching API",
-    "model": "Xenova/all-MiniLM-L6-v2"
-  }
-  ```
-
-### `POST /api/matches`
-Finds, scores, and ranks candidate matches.
-* **Headers:** `Authorization: Bearer <supabase_access_token>`
-* **Body:**
-  ```json
-  {
-    "targetItemId": "uuid-of-target-report",
-    "limit": 10
-  }
-  ```
-* **Response:** Ranked candidates with similarity score percentages, itemized breakdowns (`textSimilarityPct`, `categoryMatch`, `colorScorePct`, `dateProximityPct`, `locationSimilarityPct`), sanitized locations, and proof-of-ownership disclaimers.
+1. **Student Verification & RLS**: Authenticated access requires valid university student registry enrollment. Ordinary students cannot modify admin records or bypass verification.
+2. **Dual-Party Handover**: Resolving a claim requires mutual confirmation from both the verified finder and claimant. Suspicious velocity triggers automatic temporary handover holds.
+3. **Multimodal AI Matching**: Multi-factor scoring combines semantic text embeddings (`all-MiniLM-L6-v2`), CLIP visual similarity (`ViT-B/32`), category matching, color distance, temporal proximity, and location token overlap.
+4. **Zero Frontend Secret Leaks**: Strict validation prevents service-role credentials from being bundled into client builds.

@@ -1,0 +1,20 @@
+{
+  "name": "findai-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "node tests/testMigrationValidation.js && node tests/testEnvConfig.js && node tests/testSuspiciousHandover.js && node tests/testStudentRegistryWorkflow.js && node tests/testSimplifiedStudentAuth.js && node tests/testFinalAuthRequirements.js && node tests/testClaimWorkflow.js && node tests/testReportModeration.js && node tests/testCommunityWorkflow.js && node tests/testHandoverManagement.js && node tests/testEndToEndStudentWorkflow.js && node tests/testLoginAuthDiagnostics.js && node tests/testSecurityAudit.js && node tests/testMetrics.js && node tests/testClipMatcher.js && node tests/testImageMatchingIntegration.js && node tests/testAiMatcher.js",
+    "evaluate:ai": "node ai/evaluate.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "@xenova/transformers": "^2.17.2",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0"
+  }
+}
