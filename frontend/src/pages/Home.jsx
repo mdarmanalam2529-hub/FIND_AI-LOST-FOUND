@@ -13,11 +13,7 @@ import {
   ChevronDown,
   Layers,
   MapPin,
-  Calendar,
-  Tag,
   Cpu,
-  Clock,
-  Check
 } from 'lucide-react';
 import TiltCard from '../components/TiltCard';
 import AiOrb3D from '../components/AiOrb3D';

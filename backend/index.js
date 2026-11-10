@@ -25,28 +25,28 @@ const PORT = process.env.PORT || 3001;
 
 // Supabase Configuration from validated environment
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = 
-  process.env.SUPABASE_PUBLISHABLE_KEY || 
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const serviceSupabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : null;
 
 export const anonSupabase = (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : null;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -76,10 +76,18 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
   process.env.FRONTEND_URL,
+  ...envOrigins,
 ].filter(Boolean);
 
 app.use(
@@ -87,10 +95,11 @@ app.use(
     origin: (origin, callback) => {
       // allow requests with no origin (like mobile apps, curl, or same-origin)
       if (!origin) return callback(null, true);
-      // allow localhost, 127.0.0.1, or any local IP on LAN (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+      // allow explicitly configured origins, local IPs, or Vercel preview URLs (*.vercel.app)
       if (
         allowedOrigins.includes(origin) ||
-        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin)
+        /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin) ||
+        /^https:\/\/[a-zA-Z0-9_\-]+\.vercel\.app$/.test(origin)
       ) {
         return callback(null, true);
       }
@@ -407,6 +416,19 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+// Global Express error handler to prevent stack trace leaks in production
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  console.error('[Server Error]', err);
+  const status = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+  res.status(status).json({
+    error: err.name || 'Internal Server Error',
+    message: isProd && status === 500 ? 'An unexpected server error occurred.' : (err.message || 'Server error'),
+    ...(isProd ? {} : { stack: err.stack }),
+  });
+});
+
 // Warm up models in background on startup
 Promise.allSettled([
   getEmbeddingPipeline()
@@ -415,7 +437,8 @@ Promise.allSettled([
     .then(() => console.log('[AI Server] CLIP ViT-B/32 image embedding model loaded and ready.')),
 ]).catch((err) => console.warn('[AI Server] Model background pre-warming deferred:', err.message));
 
-const HOST = process.env.HOST;
+// On Linux / Render production, bind to 0.0.0.0; in local dev fallback to localhost
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : undefined);
 
 const onListen = () => {
   console.log(`[AI Server] FindAI Matching Engine running on http://${HOST || 'localhost'}:${PORT}`);
@@ -431,5 +454,21 @@ server.on('error', (err) => {
   }
   process.exit(1);
 });
+
+// Graceful shutdown handling for Render and container environments
+function handleShutdown(signal) {
+  console.log(`[AI Server] Received ${signal}. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('[AI Server] HTTP server closed cleanly.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('[AI Server] Forced shutdown after timeout.');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
 
 export default app;

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getApiUrl } from '../lib/apiConfig';
 
 /**
  * Service for Hybrid Claim & Return System.
@@ -25,7 +26,7 @@ export const claimsService = {
   async submitClaim({ foundItemId, lostItemId, claimMessage, privateProof = {} }) {
     const headers = await getAuthHeader();
 
-    const response = await fetch('/api/claims', {
+    const response = await fetch(getApiUrl('/api/claims'), {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -49,7 +50,7 @@ export const claimsService = {
   async fetchClaims() {
     const headers = await getAuthHeader();
 
-    const response = await fetch('/api/claims', {
+    const response = await fetch(getApiUrl('/api/claims'), {
       method: 'GET',
       headers,
     });
@@ -67,7 +68,7 @@ export const claimsService = {
   async reviewClaim(claimId, { action, reason = '', adminNotes = '' }) {
     const headers = await getAuthHeader();
 
-    const response = await fetch(`/api/claims/${claimId}/review`, {
+    const response = await fetch(getApiUrl(`/api/claims/${claimId}/review`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ action, reason, adminNotes }),
@@ -86,7 +87,7 @@ export const claimsService = {
   async coordinateHandover(handoverId, { proposedLocation, scheduledAt = null, notes = '' }) {
     const headers = await getAuthHeader();
 
-    const response = await fetch(`/api/handovers/${handoverId}/coordinate`, {
+    const response = await fetch(getApiUrl(`/api/handovers/${handoverId}/coordinate`), {
       method: 'POST',
       headers,
       body: JSON.stringify({ proposedLocation, scheduledAt, notes }),
@@ -105,7 +106,7 @@ export const claimsService = {
   async confirmHandover(handoverId, confirmationType) {
     const headers = await getAuthHeader();
 
-    const response = await fetch(`/api/handovers/${handoverId}/confirm`, {
+    const response = await fetch(getApiUrl(`/api/handovers/${handoverId}/confirm`), {
       method: 'POST',
       headers,
       body: JSON.stringify({ confirmationType }),
@@ -124,7 +125,7 @@ export const claimsService = {
   async fetchNotifications() {
     const headers = await getAuthHeader();
 
-    const response = await fetch('/api/notifications', {
+    const response = await fetch(getApiUrl('/api/notifications'), {
       method: 'GET',
       headers,
     });
@@ -142,7 +143,7 @@ export const claimsService = {
   async markNotificationRead(notificationId) {
     const headers = await getAuthHeader();
 
-    const response = await fetch(`/api/notifications/${notificationId}/read`, {
+    const response = await fetch(getApiUrl(`/api/notifications/${notificationId}/read`), {
       method: 'PATCH',
       headers,
     });
@@ -161,7 +162,7 @@ export const claimsService = {
     if (incidentType !== 'all') params.append('incidentType', incidentType);
     if (search) params.append('search', search);
 
-    const url = `/api/admin/incidents${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = getApiUrl(`/api/admin/incidents${params.toString() ? `?${params.toString()}` : ''}`);
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
     if (!response.ok) {
@@ -175,7 +176,7 @@ export const claimsService = {
    */
   async fetchIncidentStats() {
     const headers = await getAuthHeader();
-    const response = await fetch('/api/admin/incidents/stats', { method: 'GET', headers });
+    const response = await fetch(getApiUrl('/api/admin/incidents/stats'), { method: 'GET', headers });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || `Failed to fetch incident stats (HTTP ${response.status})`);
@@ -188,7 +189,7 @@ export const claimsService = {
    */
   async reviewIncident(incidentId, { status, decisionNotes, releaseHold = false }) {
     const headers = await getAuthHeader();
-    const response = await fetch(`/api/admin/incidents/${incidentId}/review`, {
+    const response = await fetch(getApiUrl(`/api/admin/incidents/${incidentId}/review`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ status, decisionNotes, releaseHold }),

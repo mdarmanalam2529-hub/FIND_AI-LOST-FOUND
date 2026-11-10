@@ -1,6 +1,6 @@
 {
   "benchmarkMetadata": {
-    "timestamp": "2026-11-10T05:41:58.027Z",
+    "timestamp": "2026-11-10T06:16:42.323Z",
     "dataset": {
       "name": "FindAI Synthetic Lost-and-Found Benchmark v1",
       "type": "synthetic",
@@ -19,7 +19,7 @@
       "queryCount": 10,
       "disclaimer": "SYNTHETIC BENCHMARK DATASET: Does not contain private user records or real-world evidence."
     },
-    "prewarmDurationMs": 382.4,
+    "prewarmDurationMs": 457.6,
     "limitations": [
       "Evaluated on synthetic test queries and candidates created for algorithmic benchmarking.",
       "Does not measure user submission errors, heavily corrupted photos, or multi-lingual texts.",
@@ -43,14 +43,14 @@
         "meanReciprocalRank": 0.9,
         "latency": {
           "count": 10,
-          "meanMs": 0.9,
-          "medianMs": 0.1,
-          "p90Ms": 8.4,
-          "minMs": 0.1,
-          "maxMs": 8.4
+          "meanMs": 1.2,
+          "medianMs": 0.3,
+          "p90Ms": 9.4,
+          "minMs": 0.2,
+          "maxMs": 9.4
         }
       },
-      "coldStartLatencyMs": 8.4
+      "coldStartLatencyMs": 9.4
     },
     {
       "id": "ai-text-metadata",
@@ -68,14 +68,14 @@
         "meanReciprocalRank": 0.9,
         "latency": {
           "count": 10,
-          "meanMs": 54.1,
-          "medianMs": 53.4,
-          "p90Ms": 60.7,
-          "minMs": 46.7,
-          "maxMs": 60.7
+          "meanMs": 54.2,
+          "medianMs": 54.5,
+          "p90Ms": 64.7,
+          "minMs": 49.3,
+          "maxMs": 64.7
         }
       },
-      "coldStartLatencyMs": 60.7
+      "coldStartLatencyMs": 64.7
     },
     {
       "id": "ai-multimodal-full",
@@ -93,14 +93,14 @@
         "meanReciprocalRank": 0.9,
         "latency": {
           "count": 10,
-          "meanMs": 82.4,
-          "medianMs": 56.1,
-          "p90Ms": 206.3,
-          "minMs": 45.2,
-          "maxMs": 206.3
+          "meanMs": 98.1,
+          "medianMs": 54.8,
+          "p90Ms": 220.4,
+          "minMs": 52.3,
+          "maxMs": 220.4
         }
       },
-      "coldStartLatencyMs": 45.2
+      "coldStartLatencyMs": 52.9
     }
   ]
 }

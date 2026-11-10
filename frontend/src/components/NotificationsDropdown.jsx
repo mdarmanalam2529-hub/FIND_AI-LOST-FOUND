@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Clock, ShieldAlert, CheckCircle2, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { claimsService } from '../services/claimsService';
 
 export default function NotificationsDropdown() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
   const loadNotifications = async () => {

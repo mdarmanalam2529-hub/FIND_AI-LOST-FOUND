@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, ArrowLeft, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, ArrowLeft, ShieldCheck } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ChangePassword() {

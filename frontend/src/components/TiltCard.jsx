@@ -9,7 +9,7 @@ export default function TiltCard({
   className = '',
   style = {},
   maxTilt = 3, // Restrained, subtle tilt angle
-  glare = false, // Clean by default without heavy reflection
+  _glare = false, // Clean by default without heavy reflection
   scale = 1.01,
   id,
   onClick,

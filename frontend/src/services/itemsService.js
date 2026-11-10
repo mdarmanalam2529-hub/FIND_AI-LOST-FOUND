@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getApiUrl } from '../lib/apiConfig';
 
 /**
  * Service for interacting with the Supabase `items` table and the private `item-images` storage bucket.
@@ -344,9 +345,9 @@ export const itemsService = {
       throw new Error('Authentication required: please log in to search for matches.');
     }
 
-    // 2. Call backend /api/matches via Vite proxy
+    // 2. Call backend /api/matches
     try {
-      const response = await fetch('/api/matches', {
+      const response = await fetch(getApiUrl('/api/matches'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

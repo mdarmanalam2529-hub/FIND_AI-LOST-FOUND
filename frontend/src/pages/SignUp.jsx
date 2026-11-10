@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, User, AlertCircle, CheckCircle2, Loader2, ArrowRight, GraduationCap } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
+import { getApiUrl } from '../lib/apiConfig';
 
 export default function SignUp() {
   const { user, loading: authLoading } = useAuth();
@@ -77,7 +78,7 @@ export default function SignUp() {
 
     try {
       // Secure server-side student registration with registry verification
-      const response = await fetch('/api/auth/register-student', {
+      const response = await fetch(getApiUrl('/api/auth/register-student'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

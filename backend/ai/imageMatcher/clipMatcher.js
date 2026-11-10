@@ -18,7 +18,10 @@ export const DEFAULT_TIMEOUT_MS = 6000;
 let clipPipelinePromise = null;
 let clipPipeline = null;
 let clipLoadError = null;
-let isClipDisabled = false;
+let isClipDisabled = typeof process !== 'undefined' && Boolean(
+  process.env.DISABLE_CLIP === 'true' ||
+  process.env.DISABLE_CLIP_IMAGE_MATCHER === 'true'
+);
 
 /**
  * Check if path is a safe, valid storage path (prevents path traversal)
@@ -47,7 +50,10 @@ export function resetClipState() {
   clipPipelinePromise = null;
   clipPipeline = null;
   clipLoadError = null;
-  isClipDisabled = false;
+  isClipDisabled = typeof process !== 'undefined' && Boolean(
+    process.env.DISABLE_CLIP === 'true' ||
+    process.env.DISABLE_CLIP_IMAGE_MATCHER === 'true'
+  );
 }
 
 /**

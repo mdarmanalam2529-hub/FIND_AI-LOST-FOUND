@@ -1,0 +1,40 @@
+# -----------------------------------------------------------------------------
+# Render Blueprint Specification for FindAI Backend
+# Deploy via Render Dashboard -> Blueprints -> Connect Repository
+# -----------------------------------------------------------------------------
+services:
+  - type: web
+    name: findai-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Starter plan (2GB RAM) or higher is recommended for full multimodal AI (MiniLM text + CLIP vision).
+    # If deploying on Free tier (512MB RAM), set DISABLE_CLIP_IMAGE_MATCHER to true below.
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Required Supabase Credentials (set secret values in Render Dashboard)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Admin Emails Whitelist (comma-separated verified university emails)
+      - key: ADMIN_EMAILS
+        sync: false
+      # CORS: Add your Vercel frontend URL
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # Set to 'true' if running on a 512MB free tier instance to disable CLIP image embeddings
+      - key: DISABLE_CLIP_IMAGE_MATCHER
+        value: false
+

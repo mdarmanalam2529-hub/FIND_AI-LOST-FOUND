@@ -1,6 +1,7 @@
 // Frontend service for fetching the unified admin dashboard statistics
 
 import { supabase } from '../lib/supabase';
+import { getApiUrl } from '../lib/apiConfig';
 
 /**
  * Retrieves the authentication header using the same logic as other services.
@@ -25,7 +26,7 @@ export const adminService = {
    */
   async fetchDashboard() {
     const headers = await getAuthHeader();
-    const response = await fetch('/api/admin/dashboard', {
+    const response = await fetch(getApiUrl('/api/admin/dashboard'), {
       method: 'GET',
       headers,
     });
@@ -34,7 +35,7 @@ export const adminService = {
     let payload;
     try {
       payload = await response.json();
-    } catch (e) {
+    } catch {
       throw new Error('Failed to parse server response as JSON.');
     }
 

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, ArrowLeft } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
 
 export default function ResetPassword() {
-  const { updatePassword, session, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { updatePassword } = useAuth();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

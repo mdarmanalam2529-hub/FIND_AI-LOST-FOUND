@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getApiUrl } from '../lib/apiConfig';
 
 const AuthContext = createContext({
   user: null,
@@ -111,7 +112,7 @@ export function AuthProvider({ children }) {
       throw new Error('Password is required.');
     }
 
-    const response = await fetch('/api/auth/student-login', {
+    const response = await fetch(getApiUrl('/api/auth/student-login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -193,7 +194,7 @@ export function AuthProvider({ children }) {
       throw new Error('You must be signed in to change your password.');
     }
 
-    const response = await fetch('/api/auth/change-password', {
+    const response = await fetch(getApiUrl('/api/auth/change-password'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

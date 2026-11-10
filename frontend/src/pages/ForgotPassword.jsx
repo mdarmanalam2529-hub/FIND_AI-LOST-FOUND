@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle2, Loader2, KeyRound } from 'lucide-react';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
+import { getApiUrl } from '../lib/apiConfig';
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
@@ -25,7 +26,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       // Use backend anti-enumeration recovery endpoint
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch(getApiUrl('/api/auth/forgot-password'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

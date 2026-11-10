@@ -8,7 +8,6 @@ import {
   ShieldAlert, 
   Info,
   Loader2,
-  Lock,
   Tag
 } from 'lucide-react';
 import TiltCard from './TiltCard';

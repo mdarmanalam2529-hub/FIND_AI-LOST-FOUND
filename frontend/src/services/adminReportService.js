@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js';
+import { getApiUrl } from '../lib/apiConfig.js';
 
 async function getAuthHeaders() {
   if (!supabase) throw new Error('Supabase client is not initialized.');
@@ -35,7 +36,7 @@ export const adminReportService = {
     if (indicator && indicator !== 'all') params.set('indicator', indicator);
     if (search && search.trim()) params.set('search', search.trim());
 
-    const response = await fetch(`/api/admin/reports?${params.toString()}`, {
+    const response = await fetch(getApiUrl(`/api/admin/reports?${params.toString()}`), {
       method: 'GET',
       headers,
     });
@@ -66,7 +67,7 @@ export const adminReportService = {
   async fetchReport(id) {
     if (!id) throw new Error('Report ID is required.');
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/reports/${encodeURIComponent(id)}`, {
+    const response = await fetch(getApiUrl(`/api/admin/reports/${encodeURIComponent(id)}`), {
       method: 'GET',
       headers,
     });
@@ -94,7 +95,7 @@ export const adminReportService = {
   async fetchMatches(id) {
     if (!id) throw new Error('Report ID is required.');
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/reports/${encodeURIComponent(id)}/matches`, {
+    const response = await fetch(getApiUrl(`/api/admin/reports/${encodeURIComponent(id)}/matches`), {
       method: 'GET',
       headers,
     });
@@ -121,7 +122,7 @@ export const adminReportService = {
     if (!action) throw new Error('Moderation action is required.');
 
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/reports/${encodeURIComponent(id)}/moderate`, {
+    const response = await fetch(getApiUrl(`/api/admin/reports/${encodeURIComponent(id)}/moderate`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ action, reason, details }),

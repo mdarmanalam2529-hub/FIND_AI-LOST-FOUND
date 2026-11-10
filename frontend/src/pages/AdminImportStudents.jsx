@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../lib/apiConfig';
 import {
   UploadCloud,
   FileText,
@@ -64,7 +65,7 @@ export default function AdminImportStudents() {
       }
 
       try {
-        const response = await fetch('/api/admin/student-registry/check-access', {
+        const response = await fetch(getApiUrl('/api/admin/student-registry/check-access'), {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
@@ -105,7 +106,7 @@ export default function AdminImportStudents() {
     if (!session?.access_token || !isAuthorized) return;
     setLoadingStats(true);
     try {
-      const response = await fetch('/api/admin/student-registry/stats', {
+      const response = await fetch(getApiUrl('/api/admin/student-registry/stats'), {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -167,7 +168,7 @@ export default function AdminImportStudents() {
     setImportResult(null);
 
     try {
-      const response = await fetch('/api/admin/student-registry/preview', {
+      const response = await fetch(getApiUrl('/api/admin/student-registry/preview'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +228,7 @@ export default function AdminImportStudents() {
     setImportError(null);
 
     try {
-      const response = await fetch('/api/admin/student-registry/import', {
+      const response = await fetch(getApiUrl('/api/admin/student-registry/import'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

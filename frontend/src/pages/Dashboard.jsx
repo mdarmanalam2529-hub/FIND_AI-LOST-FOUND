@@ -21,9 +21,6 @@ import {
   Camera,
   RefreshCw,
   GraduationCap,
-  Users,
-  FileText,
-  Handshake,
   User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +31,7 @@ import ClaimsManager from '../components/ClaimsManager';
 import ClaimModal from '../components/ClaimModal';
 import AiMatchingVisualizer from '../components/AiMatchingVisualizer';
 import HeroAnimatedBackground from '../components/HeroAnimatedBackground';
-import { isAdminUser, isStaffOrAdminUser, isPrimaryAdminUser, getUserRoleTitle } from '../lib/roleHelpers';
+import { isAdminUser, isStaffOrAdminUser, isPrimaryAdminUser } from '../lib/roleHelpers';
 import StatCard from '../components/ui/StatCard';
 
 
@@ -83,7 +80,6 @@ export default function Dashboard() {
   const isPrimaryAdmin = isPrimaryAdminUser(user);
   const isAdmin = isAdminUser(user);
   const isStaffOrAdmin = isStaffOrAdminUser(user);
-  const roleTitle = getUserRoleTitle(user);
 
   // Administrator security guard: student workspace strictly isolates personal reports and metrics
   if (!isAdmin) {

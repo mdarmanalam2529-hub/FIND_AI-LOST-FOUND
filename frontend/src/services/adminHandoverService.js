@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js';
+import { getApiUrl } from '../lib/apiConfig.js';
 
 async function getAuthHeaders() {
   if (!supabase) throw new Error('Supabase client is not initialized.');
@@ -33,7 +34,7 @@ export const adminHandoverService = {
     if (isFlagged && isFlagged !== 'all') params.set('is_flagged', isFlagged);
     if (search && search.trim()) params.set('search', search.trim());
 
-    const response = await fetch(`/api/admin/handovers?${params.toString()}`, {
+    const response = await fetch(getApiUrl(`/api/admin/handovers?${params.toString()}`), {
       method: 'GET',
       headers,
     });
@@ -60,7 +61,7 @@ export const adminHandoverService = {
   async fetchHandover(id) {
     if (!id) throw new Error('Handover ID is required.');
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/handovers/${encodeURIComponent(id)}`, {
+    const response = await fetch(getApiUrl(`/api/admin/handovers/${encodeURIComponent(id)}`), {
       method: 'GET',
       headers,
     });
@@ -90,7 +91,7 @@ export const adminHandoverService = {
     if (!reason || reason.trim().length < 3) throw new Error('Mandatory reason of at least 3 characters is required.');
 
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/handovers/${encodeURIComponent(id)}/suspend`, {
+    const response = await fetch(getApiUrl(`/api/admin/handovers/${encodeURIComponent(id)}/suspend`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ reason: reason.trim() }),
@@ -120,7 +121,7 @@ export const adminHandoverService = {
     if (!reason || reason.trim().length < 3) throw new Error('Mandatory explanation reason of at least 3 characters is required.');
 
     const headers = await getAuthHeaders();
-    const response = await fetch(`/api/admin/handovers/${encodeURIComponent(id)}/release-hold`, {
+    const response = await fetch(getApiUrl(`/api/admin/handovers/${encodeURIComponent(id)}/release-hold`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ reason: reason.trim() }),

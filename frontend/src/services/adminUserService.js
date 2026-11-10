@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js';
+import { getApiUrl } from '../lib/apiConfig.js';
 
 async function getAuthHeaders() {
   if (!supabase) throw new Error('Supabase client is not initialized.');
@@ -18,7 +19,7 @@ export const adminUserService = {
    */
   async listUsers() {
     const headers = await getAuthHeaders();
-    const res = await fetch('/api/admin/users', { method: 'GET', headers });
+    const res = await fetch(getApiUrl('/api/admin/users'), { method: 'GET', headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.message || 'Failed to fetch administrative users.');
@@ -31,7 +32,7 @@ export const adminUserService = {
    */
   async createUser({ email, password, fullName, role }) {
     const headers = await getAuthHeaders();
-    const res = await fetch('/api/admin/users', {
+    const res = await fetch(getApiUrl('/api/admin/users'), {
       method: 'POST',
       headers,
       body: JSON.stringify({ email, password, fullName, role }),
@@ -48,7 +49,7 @@ export const adminUserService = {
    */
   async updateRole(userId, newRole) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`/api/admin/users/${userId}/role`, {
+    const res = await fetch(getApiUrl(`/api/admin/users/${userId}/role`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ newRole }),
@@ -65,7 +66,7 @@ export const adminUserService = {
    */
   async updateStatus(userId, isActive) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`/api/admin/users/${userId}/status`, {
+    const res = await fetch(getApiUrl(`/api/admin/users/${userId}/status`), {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ isActive }),
@@ -82,7 +83,7 @@ export const adminUserService = {
    */
   async deleteUser(userId) {
     const headers = await getAuthHeaders();
-    const res = await fetch(`/api/admin/users/${userId}`, {
+    const res = await fetch(getApiUrl(`/api/admin/users/${userId}`), {
       method: 'DELETE',
       headers,
     });
@@ -98,7 +99,7 @@ export const adminUserService = {
    */
   async fetchAuditLogs() {
     const headers = await getAuthHeaders();
-    const res = await fetch('/api/admin/users/audit-logs', { method: 'GET', headers });
+    const res = await fetch(getApiUrl('/api/admin/users/audit-logs'), { method: 'GET', headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.message || 'Failed to fetch audit logs.');

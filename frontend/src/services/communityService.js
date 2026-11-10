@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { itemsService } from './itemsService';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { getApiUrl } from '../lib/apiConfig';
 
 /**
  * Strips phone numbers and email patterns embedded in descriptions or locations.
@@ -60,7 +59,7 @@ export const communityService = {
 
     if (token) {
       try {
-        const res = await fetch(`${API_BASE_URL}/community/items?${params.toString()}`, {
+        const res = await fetch(getApiUrl(`/api/community/items?${params.toString()}`), {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -225,7 +224,7 @@ export const communityService = {
 
     if (token) {
       try {
-        const res = await fetch(`${API_BASE_URL}/community/stats`, {
+        const res = await fetch(getApiUrl('/api/community/stats'), {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -272,7 +271,7 @@ export const communityService = {
 
     // Try backend API first
     try {
-      const res = await fetch(`${API_BASE_URL}/community/items/${itemId}/report`, {
+      const res = await fetch(getApiUrl(`/api/community/items/${itemId}/report`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

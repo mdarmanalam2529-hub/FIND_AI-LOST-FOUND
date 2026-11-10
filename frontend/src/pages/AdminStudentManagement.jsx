@@ -1,6 +1,7 @@
 // src/pages/AdminStudentManagement.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getApiUrl } from '../lib/apiConfig';
 import {
   Search,
   Loader2,
@@ -41,13 +42,14 @@ export default function AdminStudentManagement() {
     setLoading(true);
     setError(null);
     try {
-      const url = new URL('/api/admin/student-registry/search', window.location.origin);
+      const targetBase = getApiUrl('/api/admin/student-registry/search');
+      const url = new URL(targetBase, window.location.origin);
       if (q && q.trim()) url.searchParams.append('q', q.trim());
       url.searchParams.append('page', p);
       url.searchParams.append('limit', limit);
       if (status && status !== 'all') url.searchParams.append('status', status);
 
-      const resp = await fetch(url, {
+      const resp = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await resp.json();
@@ -84,7 +86,7 @@ export default function AdminStudentManagement() {
 
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/admin/student-registry/${encodeURIComponent(regNumber)}`, {
+      const resp = await fetch(getApiUrl(`/api/admin/student-registry/${encodeURIComponent(regNumber)}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +113,7 @@ export default function AdminStudentManagement() {
 
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/admin/student-registry/${encodeURIComponent(regNumber)}`, {
+      const resp = await fetch(getApiUrl(`/api/admin/student-registry/${encodeURIComponent(regNumber)}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

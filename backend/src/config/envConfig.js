@@ -256,11 +256,24 @@ export function loadAndValidateEnvironment(options = {}) {
 
   if (mode === 'production') {
     let prodVars = options.envOverride || null;
+    let source = options.prodEnvFile || prodEnvFile;
+
     if (!prodVars) {
-      if (!fs.existsSync(prodEnvFile)) {
-        throw new Error(`[Security Error] Production mode requires ${prodEnvFile}.`);
+      // In cloud environments (Render, Heroku, Docker, etc.), production credentials are
+      // injected directly into process.env / targetEnv by the platform.
+      const directUrl = extractSupabaseUrl(targetEnv);
+      const directServiceRole = targetEnv.SUPABASE_SERVICE_ROLE_KEY || targetEnv.SERVICE_ROLE_KEY;
+
+      if (directUrl && directServiceRole) {
+        prodVars = targetEnv;
+        source = 'process.env';
+      } else if (fs.existsSync(prodEnvFile)) {
+        prodVars = parseEnvFile(prodEnvFile);
+      } else {
+        throw new Error(
+          `[Security Error] Production mode requires either environment variables in process.env or ${prodEnvFile}.`
+        );
       }
-      prodVars = parseEnvFile(prodEnvFile);
     }
 
     const url = extractSupabaseUrl(prodVars);
@@ -291,7 +304,7 @@ export function loadAndValidateEnvironment(options = {}) {
       mode: 'production',
       isLocal: false,
       targetUrl: url,
-      source: prodEnvFile,
+      source,
     };
   }
 
