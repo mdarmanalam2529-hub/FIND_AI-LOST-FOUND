@@ -9,9 +9,10 @@
   ],
   "scripts": {
     "dev": "npm --prefix frontend run dev",
-    "server": "npm --prefix backend start",
+    "server": "node backend/index.js",
+    "start": "node backend/index.js",
     "dev:all": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
-    "start": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
+    "start:all": "concurrently -n \"API,APP\" -c \"cyan.bold,green.bold\" \"npm run server\" \"npm run dev\"",
     "build": "npm --prefix frontend run build",
     "start:prod": "npm run build && npm --prefix backend start",
     "test": "npm --prefix backend test",
